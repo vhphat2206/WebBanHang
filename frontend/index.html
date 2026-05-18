@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Luxury Fashion Shop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen p-12">
+    <div class="max-w-4xl mx-auto text-center">
+        <h1 class="text-4xl font-black bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent mb-4">PREMIUM STORE</h1>
+        <p class="text-gray-400 mb-8">Hệ thống tìm kiếm quần áo Jordan kết nối API .NET 8</p>
+        
+        <div class="flex gap-4 max-w-md mx-auto mb-12">
+            <input type="text" id="searchInput" placeholder="Nhập từ khóa (Ví dụ: quần jordan)..." class="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-gray-100 focus:outline-none focus:border-amber-400"/>
+            <button onclick="performSearch()" class="bg-gradient-to-r from-amber-400 to-orange-500 text-gray-950 font-bold px-6 rounded-xl hover:opacity-90">Tìm</button>
+        </div>
+
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"></div>
+    </div>
+
+    <script>
+        async function performSearch() {
+            const query = document.getElementById("searchInput").value;
+            const grid = document.getElementById("productGrid");
+            grid.innerHTML = `<div class="col-span-full text-gray-500">Đang tìm kiếm sản phẩm...</div>`;
+            
+            try {
+                // Gọi trực tiếp đến cổng Backend 5083 bạn vừa bật
+                const response = await fetch(`http://localhost:5083/api/Products/search?query=${encodeURIComponent(query)}`);
+                const products = await response.json();
+                grid.innerHTML = "";
+                
+                if (products.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-gray-400">Không tìm thấy sản phẩm nào!</div>`;
+                    return;
+                }
+                
+                // Vòng lặp tự động đổ dữ liệu từ DB ra các thẻ Card
+                products.forEach(product => {
+                    grid.innerHTML += `
+                        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 text-left flex flex-col justify-between shadow-lg">
+                            <div>
+                                <span class="text-xs text-amber-400 font-bold uppercase tracking-wider">${product.category ? product.category.name : 'Fashion'}</span>
+                                <h3 class="font-bold text-lg text-gray-100 mt-1">${product.name}</h3>
+                                <p class="text-gray-400 text-xs mt-1">${product.description}</p>
+                            </div>
+                            <div class="mt-4 flex items-center justify-between">
+                                <span class="text-amber-400 font-extrabold">${product.price.toLocaleString('vi-VN')} đ</span>
+                                <span class="text-gray-600 text-xs italic">[${product.imageUrl}]</span>
+                            </div>
+                        </div>`;
+                });
+            } catch (error) {
+                grid.innerHTML = `<div class="col-span-full text-red-400">Lỗi kết nối Backend! (Hãy chắc chắn bạn chưa tắt Terminal đang chạy dotnet run).</div>`;
+            }
+        }
+        // Tự động tìm kiếm lần đầu để hiển thị toàn bộ đồ khi vừa mở trang
+        window.onload = performSearch;
+    </script>
+</body>
+</html>
