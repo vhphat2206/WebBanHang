@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADLV Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #F8FAFC; color: #0F172A; }
+        .chip {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #111; color: white;
+            padding: 4px 10px; border-radius: 999px;
+            font-size: 12px; font-weight: 500;
+        }
+        .chip button { background: rgba(255,255,255,0.2); border-radius: 999px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; font-size: 11px; line-height: 1; }
+        .chip button:hover { background: rgba(255,255,255,0.4); }
+        .skeleton { background: linear-gradient(90deg, #f5f5f5 25%, #ebebeb 50%, #f5f5f5 75%); background-size: 200% 100%; animation: skl 1.4s infinite; }
+        @keyframes skl { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+        .modal-enter { animation: enter 0.2s ease; }
+        @keyframes enter { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #111; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+        .nav-link { transition: all 0.15s; }
+        .nav-link.active { background: #111; color: white; }
+        .nav-link:hover:not(.active) { background: #f1f5f9; }
+        .badge-new { background: #111; color: white; }
+        .badge-best { background: #F59E0B; color: white; }
+        .badge-sale { background: #DC2626; color: white; }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="min-h-screen flex items-center justify-center px-4">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+        <div class="text-center mb-8">
+            <div class="text-3xl font-black tracking-tighter">ADLV<span class="text-red-600">.</span></div>
+            <div class="text-xs text-gray-500 uppercase tracking-widest mt-1">Admin Panel</div>
+        </div>
+        <form id="loginForm" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Tài khoản</label>
+                <input type="text" id="loginUser" required value="admin"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="admin"/>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mật khẩu</label>
+                <input type="password" id="loginPass" required value="admin123"
+                    class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="••••••••"/>
+            </div>
+            <div id="loginError" class="text-sm text-red-600 hidden"></div>
+            <button type="submit" class="w-full bg-black text-white font-bold uppercase py-3 rounded-lg hover:bg-red-600 transition">Đăng nhập</button>
+        </form>
+        <div class="mt-6 text-xs text-gray-400 text-center">
+            <div class="font-semibold">Tài khoản mặc định:</div>
+            <div>admin / admin123</div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN APP (hidden until login) -->
+<div id="app" class="hidden min-h-screen">
+    <div class="flex">
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-white border-r border-gray-200 min-h-screen sticky top-0">
+            <div class="p-6 border-b border-gray-100">
+                <div class="text-2xl font-black tracking-tighter">ADLV<span class="text-red-600">.</span></div>
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest">Admin Panel</div>
+            </div>
+            <nav class="p-3 space-y-1">
+                <button class="nav-link active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold" data-view="products">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    Sản phẩm
+                </button>
+                <button class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-700" data-view="categories">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                    Danh mục
+                </button>
+                <a href="index.html" target="_blank" class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    Xem store
+                </a>
+            </nav>
+            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center font-bold">A</div>
+                    <div>
+                        <div class="text-sm font-semibold" id="adminName">Admin</div>
+                        <div class="text-xs text-gray-500">Quản trị viên</div>
+                    </div>
+                </div>
+                <button onclick="logout()" class="w-full text-sm font-semibold text-gray-600 hover:text-red-600 py-2">Đăng xuất →</button>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="flex-1 p-8">
+            <!-- PRODUCTS VIEW -->
+            <div id="productsView">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 class="text-3xl font-black">Sản phẩm</h1>
+                        <p class="text-gray-500 text-sm mt-1" id="productCount">Đang tải...</p>
+                    </div>
+                    <button onclick="openProductModal()" class="bg-black text-white font-bold uppercase text-sm px-6 py-3 rounded-lg hover:bg-red-600 transition flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Thêm sản phẩm
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr class="text-xs uppercase tracking-wider text-gray-500 font-bold">
+                                    <th class="text-left px-6 py-4">Ảnh</th>
+                                    <th class="text-left px-6 py-4">Tên / SKU</th>
+                                    <th class="text-left px-6 py-4">Brand</th>
+                                    <th class="text-left px-6 py-4">Danh mục</th>
+                                    <th class="text-right px-6 py-4">Giá</th>
+                                    <th class="text-center px-6 py-4">Stock</th>
+                                    <th class="text-left px-6 py-4">Badge</th>
+                                    <th class="text-right px-6 py-4">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CATEGORIES VIEW -->
+            <div id="categoriesView" class="hidden">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 class="text-3xl font-black">Danh mục</h1>
+                        <p class="text-gray-500 text-sm mt-1" id="categoryCount">Đang tải...</p>
+                    </div>
+                    <button onclick="openCategoryModal()" class="bg-black text-white font-bold uppercase text-sm px-6 py-3 rounded-lg hover:bg-red-600 transition">+ Thêm danh mục</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="categoryGrid"></div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- PRODUCT MODAL -->
+<div id="productModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto" onclick="if(event.target.id==='productModal') closeProductModal()">
+    <div class="modal-enter min-h-screen flex items-start justify-center p-4 py-10">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl">
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-8 py-6 flex items-center justify-between rounded-t-2xl">
+                <div>
+                    <h2 class="text-2xl font-black" id="modalTitle">Thêm sản phẩm mới</h2>
+                    <p class="text-sm text-gray-500 mt-1">Điền đầy đủ thông tin theo chuẩn ADLV</p>
+                </div>
+                <button onclick="closeProductModal()" class="w-10 h-10 hover:bg-gray-100 rounded-full text-2xl text-gray-400">×</button>
+            </div>
+
+            <form id="productForm" class="p-8 space-y-8">
+                <input type="hidden" id="productId"/>
+
+                <!-- Section: Thông tin cơ bản -->
+                <section>
+                    <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Thông tin cơ bản</h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Tên sản phẩm *</label>
+                            <input type="text" id="f_name" required class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="VD: Áo Thun ADLV Teddy Bear Đen"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mã SKU</label>
+                            <input type="text" id="f_sku" class="w-full px-4 py-3 border border-gray-200 rounded-lg font-mono uppercase" placeholder="ADLV-21SS-SSADBK-TBD"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Thương hiệu</label>
+                            <input type="text" id="f_brand" value="ADLV" class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50" placeholder="ADLV"/>
+                            <div class="text-[11px] text-gray-400 mt-1.5">Mặc định ADLV. Có thể đổi nếu nhập hàng brand khác.</div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Danh mục *</label>
+                            <select id="f_category" required class="w-full px-4 py-3 border border-gray-200 rounded-lg bg-white"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Số lượng tồn kho</label>
+                            <input type="number" id="f_stock" min="0" value="0" class="w-full px-4 py-3 border border-gray-200 rounded-lg"/>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Giá -->
+                <section>
+                    <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Giá bán</h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Giá gốc (VNĐ) *</label>
+                            <input type="number" id="f_price" required min="0" step="1000" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="1340000"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Giá khuyến mãi (để trống nếu không có)</label>
+                            <input type="number" id="f_salePrice" min="0" step="1000" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="999000"/>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Thông số -->
+                <section>
+                    <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Thông số sản phẩm</h3>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Chất liệu</label>
+                            <input type="text" id="f_material" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="Cotton 100%"/>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Dáng</label>
+                            <input type="text" id="f_fit" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="Oversized Unisex"/>
+                        </div>
+                    </div>
+
+                    <!-- Sizes -->
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Sizes (gõ rồi Enter để thêm)</label>
+                        <div class="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg min-h-[52px]" id="sizeChips"></div>
+                        <input type="text" id="sizeInput" class="hidden"/>
+                        <input type="text" id="sizeNew" class="mt-2 w-full px-4 py-2 border border-gray-200 rounded-lg text-sm" placeholder="S, M, L, XL, 39, 40..."
+                            onkeydown="if(event.key==='Enter'){event.preventDefault(); addSize();}"/>
+                    </div>
+
+                    <!-- Colors -->
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Màu sắc (gõ rồi Enter để thêm)</label>
+                        <div class="flex flex-wrap gap-2 p-3 border border-gray-200 rounded-lg min-h-[52px]" id="colorChips"></div>
+                        <input type="text" id="colorInput" class="hidden"/>
+                        <input type="text" id="colorNew" class="mt-2 w-full px-4 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Đen, Trắng, Xanh..."
+                            onkeydown="if(event.key==='Enter'){event.preventDefault(); addColor();}"/>
+                    </div>
+                </section>
+
+                <!-- Section: Hình ảnh -->
+                <section>
+                    <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Hình ảnh</h3>
+
+                    <!-- ẢNH CHÍNH -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-xs font-bold uppercase text-gray-600">URL ảnh chính</label>
+                            <input type="file" id="mainImageFile" accept="image/*" class="hidden" onchange="uploadMainImage()"/>
+                            <button type="button" onclick="document.getElementById('mainImageFile').click()"
+                                class="text-[11px] text-gray-500 hover:text-black underline">
+                                Hoặc tải file lên
+                            </button>
+                        </div>
+                        <div class="flex gap-3 items-start">
+                            <div id="mainImagePreview" class="w-20 h-20 shrink-0 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 text-[10px] text-center p-1">
+                                Preview
+                            </div>
+                            <div class="flex-1">
+                                <input type="text" id="f_imageUrl" oninput="renderMainImage()"
+                                    class="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm"
+                                    placeholder="https://example.com/anh-san-pham.jpg"/>
+                                <div id="mainImageStatus" class="text-xs mt-1.5"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ẢNH PHỤ -->
+                    <div class="mt-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-xs font-bold uppercase text-gray-600">URL ảnh phụ (mỗi dòng 1 URL, tối đa 10)</label>
+                            <input type="file" id="extraImageFile" accept="image/*" multiple class="hidden" onchange="uploadExtraImages()"/>
+                            <button type="button" onclick="document.getElementById('extraImageFile').click()"
+                                class="text-[11px] text-gray-500 hover:text-black underline">
+                                Hoặc tải nhiều file lên
+                            </button>
+                        </div>
+                        <textarea id="f_imageUrls" rows="4" oninput="syncExtraFromTextarea()"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-lg font-mono text-xs"
+                            placeholder="https://example.com/anh-1.jpg&#10;https://example.com/anh-2.jpg&#10;https://example.com/anh-3.jpg"></textarea>
+                        <div id="extraImageStatus" class="text-xs mt-1.5"></div>
+                        <div class="flex flex-wrap gap-2 mt-3" id="extraImagesGrid"></div>
+                    </div>
+                </section>
+
+                <!-- Section: Mô tả -->
+                <section>
+                    <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Mô tả & Hướng dẫn</h3>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mô tả sản phẩm</label>
+                        <textarea id="f_description" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="Áo thun họa tiết Teddy Bear, dáng oversized..."></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Hướng dẫn bảo quản</label>
+                        <textarea id="f_care" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="Giặt máy lộn ngược, dùng lưới giặt, nhiệt độ thấp..."></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Ghi chú</label>
+                        <textarea id="f_notes" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="Sản phẩm có bột bảo vệ in hình, đây không phải lỗi..."></textarea>
+                    </div>
+                </section>
+
+                <!-- Section: Badges -->
+                <section>
+                    <h3 class="text-xs font-black uppercase tracking-widest text-gray-400 mb-4">Đánh dấu</h3>
+                    <div class="flex gap-6">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="f_isNew" class="w-5 h-5 accent-black"/>
+                            <span class="text-sm font-semibold">Hàng mới (NEW)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="f_isBestseller" class="w-5 h-5 accent-black"/>
+                            <span class="text-sm font-semibold">Bán chạy (BESTSELLER)</span>
+                        </label>
+                    </div>
+                </section>
+
+                <div id="formError" class="text-sm text-red-600 hidden"></div>
+
+                <div class="flex justify-end gap-3 pt-6 border-t border-gray-100">
+                    <button type="button" onclick="closeProductModal()" class="px-6 py-3 border border-gray-200 rounded-lg font-semibold hover:bg-gray-50">Hủy</button>
+                    <button type="submit" class="px-8 py-3 bg-black text-white rounded-lg font-bold uppercase hover:bg-red-600">Lưu sản phẩm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CATEGORY MODAL -->
+<div id="categoryModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center px-4" onclick="if(event.target.id==='categoryModal') closeCategoryModal()">
+    <div class="modal-enter bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <h2 class="text-xl font-black mb-6" id="catModalTitle">Thêm danh mục</h2>
+        <form id="categoryForm" class="space-y-4">
+            <input type="hidden" id="categoryId"/>
+            <div>
+                <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Tên danh mục *</label>
+                <input type="text" id="cat_name" required class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="Áo, Quần, Giày..."/>
+            </div>
+            <div class="flex justify-end gap-3 pt-4">
+                <button type="button" onclick="closeCategoryModal()" class="px-5 py-2.5 border border-gray-200 rounded-lg font-semibold">Hủy</button>
+                <button type="submit" class="px-6 py-2.5 bg-black text-white rounded-lg font-bold">Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="hidden fixed bottom-6 right-6 z-[100] bg-black text-white px-6 py-4 rounded-lg shadow-2xl font-semibold"></div>
+
+<script>
+    const API = 'http://localhost:5083/api';
+    const HOST = 'http://localhost:5083';
+    let token = localStorage.getItem('admin_token');
+    let currentUser = JSON.parse(localStorage.getItem('admin_user') || 'null');
+    let products = [];
+    let categories = [];
+    let editingSizes = [];
+    let editingColors = [];
+    let editingExtraImages = [];
+
+    function fullImageUrl(url) {
+        if (!url) return null;
+        if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+        if (url.startsWith('/')) return HOST + url;
+        return url;
+    }
+
+    function showToast(msg, isError = false) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = `fixed bottom-6 right-6 z-[100] px-6 py-4 rounded-lg shadow-2xl font-semibold ${isError ? 'bg-red-600' : 'bg-black'} text-white`;
+        t.classList.remove('hidden');
+        setTimeout(() => t.classList.add('hidden'), 3000);
+    }
+
+    async function api(path, options = {}) {
+        const res = await fetch(API + path, {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                ...(options.headers || {})
+            }
+        });
+        if (res.status === 401) {
+            logout();
+            throw new Error('Phiên đăng nhập đã hết hạn');
+        }
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: 'Lỗi không xác định' }));
+            throw new Error(err.message || `HTTP ${res.status}`);
+        }
+        return res.status === 204 ? null : res.json();
+    }
+
+    // ===== AUTH =====
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('loginUser').value;
+        const password = document.getElementById('loginPass').value;
+        const errEl = document.getElementById('loginError');
+        errEl.classList.add('hidden');
+        try {
+            const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+            if (data.user.role !== 'Admin') {
+                errEl.textContent = 'Tài khoản này không có quyền Admin';
+                errEl.classList.remove('hidden');
+                return;
+            }
+            localStorage.setItem('admin_token', data.token);
+            localStorage.setItem('admin_user', JSON.stringify(data.user));
+            token = data.token;
+            currentUser = data.user;
+            initApp();
+        } catch (err) {
+            errEl.textContent = err.message;
+            errEl.classList.remove('hidden');
+        }
+    });
+
+    function logout() {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_user');
+        token = null;
+        currentUser = null;
+        document.getElementById('app').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+    }
+
+    function initApp() {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        document.getElementById('adminName').textContent = currentUser.fullName || currentUser.username;
+        loadCategories();
+        loadProducts();
+    }
+
+    // ===== NAVIGATION =====
+    document.querySelectorAll('.nav-link[data-view]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.nav-link[data-view]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const view = btn.dataset.view;
+            document.getElementById('productsView').classList.toggle('hidden', view !== 'products');
+            document.getElementById('categoriesView').classList.toggle('hidden', view !== 'categories');
+            if (view === 'categories') renderCategories();
+        });
+    });
+
+    // ===== PRODUCTS =====
+    async function loadProducts() {
+        document.getElementById('productTableBody').innerHTML = Array(5).fill(0).map(() =>
+            `<tr><td colspan="8" class="px-6 py-4"><div class="h-8 skeleton rounded"></div></td></tr>`
+        ).join('');
+        try {
+            products = await api('/products');
+            renderProducts();
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+
+    function renderProducts() {
+        document.getElementById('productCount').textContent = `${products.length} sản phẩm`;
+        const tbody = document.getElementById('productTableBody');
+        if (!products.length) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center py-16 text-gray-400">Chưa có sản phẩm nào. Bấm "Thêm sản phẩm" để bắt đầu.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = products.map(p => {
+            const badges = [];
+            if (p.isNew) badges.push('<span class="badge-new text-[10px] font-bold uppercase px-2 py-0.5 rounded">New</span>');
+            if (p.isBestseller) badges.push('<span class="badge-best text-[10px] font-bold uppercase px-2 py-0.5 rounded">Best</span>');
+            if (p.salePrice) badges.push('<span class="badge-sale text-[10px] font-bold uppercase px-2 py-0.5 rounded">Sale</span>');
+
+            const initial = (p.brand || p.name).charAt(0).toUpperCase();
+            const imgUrl = fullImageUrl(p.imageUrl);
+            const thumb = imgUrl
+                ? `<img src="${imgUrl}" alt="${p.name}" class="w-12 h-12 rounded-lg object-cover" onerror="this.outerHTML='<div class=\\'w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center text-white font-black\\'>${initial}</div>'"/>`
+                : `<div class="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center text-white font-black">${initial}</div>`;
+            return `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4">${thumb}</td>
+                <td class="px-6 py-4">
+                    <div class="font-semibold text-sm">${p.name}</div>
+                    <div class="text-xs text-gray-400 font-mono mt-1">${p.sku || '—'}</div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-700">${p.brand || '—'}</td>
+                <td class="px-6 py-4 text-sm text-gray-700">${p.category ? p.category.name : '—'}</td>
+                <td class="px-6 py-4 text-right">
+                    <div class="font-bold text-sm">${p.price.toLocaleString('vi-VN')}₫</div>
+                    ${p.salePrice ? `<div class="text-xs text-red-600 font-semibold">SALE: ${p.salePrice.toLocaleString('vi-VN')}₫</div>` : ''}
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <span class="text-sm font-semibold ${p.stock > 0 ? 'text-emerald-600' : 'text-red-600'}">${p.stock}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex flex-wrap gap-1">${badges.join('') || '<span class="text-gray-300 text-xs">—</span>'}</div>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button onclick="editProduct(${p.id})" class="text-blue-600 hover:text-blue-800 text-sm font-semibold mr-3">Sửa</button>
+                    <button onclick="deleteProduct(${p.id})" class="text-red-600 hover:text-red-800 text-sm font-semibold">Xóa</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    function openProductModal() {
+        document.getElementById('modalTitle').textContent = 'Thêm sản phẩm mới';
+        document.getElementById('productForm').reset();
+        document.getElementById('productId').value = '';
+        document.getElementById('f_brand').value = 'ADLV';
+        document.getElementById('f_imageUrl').value = '';
+        document.getElementById('f_imageUrls').value = '';
+        editingSizes = [];
+        editingColors = [];
+        editingExtraImages = [];
+        renderChips();
+        renderMainImage();
+        renderExtraImages();
+        document.getElementById('productModal').classList.remove('hidden');
+    }
+
+    function closeProductModal() {
+        document.getElementById('productModal').classList.add('hidden');
+        document.getElementById('formError').classList.add('hidden');
+    }
+
+    function editProduct(id) {
+        const p = products.find(x => x.id === id);
+        if (!p) return;
+        document.getElementById('modalTitle').textContent = `Sửa: ${p.name}`;
+        document.getElementById('productId').value = p.id;
+        document.getElementById('f_name').value = p.name || '';
+        document.getElementById('f_sku').value = p.sku || '';
+        document.getElementById('f_brand').value = p.brand || '';
+        document.getElementById('f_category').value = p.categoryId || '';
+        document.getElementById('f_stock').value = p.stock || 0;
+        document.getElementById('f_price').value = p.price || 0;
+        document.getElementById('f_salePrice').value = p.salePrice || '';
+        document.getElementById('f_material').value = p.material || '';
+        document.getElementById('f_fit').value = p.fit || '';
+        document.getElementById('f_imageUrl').value = p.imageUrl || '';
+        document.getElementById('f_imageUrls').value = (p.imageUrls || '').split(',').map(s => s.trim()).filter(s => s).join('\n');
+        document.getElementById('f_description').value = p.description || '';
+        document.getElementById('f_care').value = p.careInstructions || '';
+        document.getElementById('f_notes').value = p.notes || '';
+        document.getElementById('f_isNew').checked = !!p.isNew;
+        document.getElementById('f_isBestseller').checked = !!p.isBestseller;
+        editingSizes = (p.sizes || '').split(',').map(s => s.trim()).filter(s => s);
+        editingColors = (p.colors || '').split(',').map(s => s.trim()).filter(s => s);
+        editingExtraImages = (p.imageUrls || '').split(',').map(s => s.trim()).filter(s => s);
+        document.getElementById('f_imageUrls').value = editingExtraImages.join('\n');
+        renderChips();
+        renderMainImage();
+        renderExtraImages();
+        document.getElementById('productModal').classList.remove('hidden');
+    }
+
+    async function deleteProduct(id) {
+        const p = products.find(x => x.id === id);
+        if (!confirm(`Xóa sản phẩm "${p.name}"?\n\nHành động này không thể hoàn tác.`)) return;
+        try {
+            await api(`/products/${id}`, { method: 'DELETE' });
+            showToast('Đã xóa sản phẩm');
+            loadProducts();
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('productId').value;
+        const salePriceVal = document.getElementById('f_salePrice').value;
+        const payload = {
+            name: document.getElementById('f_name').value,
+            sku: document.getElementById('f_sku').value,
+            brand: document.getElementById('f_brand').value,
+            categoryId: parseInt(document.getElementById('f_category').value),
+            stock: parseInt(document.getElementById('f_stock').value) || 0,
+            price: parseFloat(document.getElementById('f_price').value),
+            salePrice: salePriceVal ? parseFloat(salePriceVal) : null,
+            material: document.getElementById('f_material').value,
+            fit: document.getElementById('f_fit').value,
+            imageUrl: document.getElementById('f_imageUrl').value,
+            imageUrls: editingExtraImages.join(','),
+            description: document.getElementById('f_description').value,
+            careInstructions: document.getElementById('f_care').value,
+            notes: document.getElementById('f_notes').value,
+            sizes: editingSizes.join(','),
+            colors: editingColors.join(','),
+            isNew: document.getElementById('f_isNew').checked,
+            isBestseller: document.getElementById('f_isBestseller').checked
+        };
+
+        try {
+            if (id) {
+                await api(`/products/${id}`, { method: 'PUT', body: JSON.stringify({ ...payload, id: parseInt(id) }) });
+                showToast('Đã cập nhật sản phẩm');
+            } else {
+                await api('/products', { method: 'POST', body: JSON.stringify(payload) });
+                showToast('Đã thêm sản phẩm');
+            }
+            closeProductModal();
+            loadProducts();
+        } catch (err) {
+            const errEl = document.getElementById('formError');
+            errEl.textContent = err.message;
+            errEl.classList.remove('hidden');
+        }
+    });
+
+    // ===== CHIPS (sizes / colors) =====
+    function addSize() {
+        const input = document.getElementById('sizeNew');
+        const val = input.value.trim();
+        if (val && !editingSizes.includes(val)) {
+            editingSizes.push(val);
+            renderChips();
+        }
+        input.value = '';
+    }
+    function addColor() {
+        const input = document.getElementById('colorNew');
+        const val = input.value.trim();
+        if (val && !editingColors.includes(val)) {
+            editingColors.push(val);
+            renderChips();
+        }
+        input.value = '';
+    }
+    function removeSize(i) { editingSizes.splice(i, 1); renderChips(); }
+    function removeColor(i) { editingColors.splice(i, 1); renderChips(); }
+
+    function renderChips() {
+        document.getElementById('sizeChips').innerHTML = editingSizes.length
+            ? editingSizes.map((s, i) => `<span class="chip">${s}<button type="button" onclick="removeSize(${i})">×</button></span>`).join('')
+            : '<span class="text-gray-300 text-xs">Chưa có size nào</span>';
+        document.getElementById('colorChips').innerHTML = editingColors.length
+            ? editingColors.map((c, i) => `<span class="chip">${c}<button type="button" onclick="removeColor(${i})">×</button></span>`).join('')
+            : '<span class="text-gray-300 text-xs">Chưa có màu nào</span>';
+    }
+
+    // ===== IMAGE UPLOAD =====
+    async function uploadFile(file) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(API + '/upload', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: fd
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: 'Upload thất bại' }));
+            throw new Error(err.message);
+        }
+        return res.json();
+    }
+
+    async function uploadMainImage() {
+        const fileInput = document.getElementById('mainImageFile');
+        const file = fileInput.files[0];
+        const status = document.getElementById('mainImageStatus');
+        if (!file) return;
+        status.innerHTML = '<span class="text-gray-500">Đang upload...</span>';
+        try {
+            const data = await uploadFile(file);
+            document.getElementById('f_imageUrl').value = fullImageUrl(data.url);
+            status.innerHTML = `<span class="text-emerald-600 font-semibold">✓ Đã tải lên (${(data.size / 1024).toFixed(0)} KB)</span>`;
+            renderMainImage();
+        } catch (err) {
+            status.innerHTML = `<span class="text-red-600">✗ ${err.message}</span>`;
+        }
+        fileInput.value = '';
+    }
+
+    async function uploadExtraImages() {
+        const fileInput = document.getElementById('extraImageFile');
+        const files = Array.from(fileInput.files);
+        const status = document.getElementById('extraImageStatus');
+        if (!files.length) return;
+        const textarea = document.getElementById('f_imageUrls');
+        const existing = textarea.value.split('\n').map(s => s.trim()).filter(s => s);
+        if (existing.length + files.length > 10) {
+            status.innerHTML = `<span class="text-red-600">Tối đa 10 ảnh phụ</span>`;
+            return;
+        }
+        status.innerHTML = `<span class="text-gray-500">Đang tải ${files.length} ảnh...</span>`;
+        let success = 0, fail = 0;
+        for (const file of files) {
+            try {
+                const data = await uploadFile(file);
+                existing.push(fullImageUrl(data.url));
+                success++;
+            } catch { fail++; }
+        }
+        textarea.value = existing.join('\n');
+        syncExtraFromTextarea();
+        status.innerHTML = `<span class="text-emerald-600 font-semibold">✓ Tải xong: ${success} ảnh${fail ? `, ${fail} lỗi` : ''}</span>`;
+        fileInput.value = '';
+    }
+
+    function syncExtraFromTextarea() {
+        editingExtraImages = document.getElementById('f_imageUrls').value
+            .split('\n').map(s => s.trim()).filter(s => s);
+        renderExtraImages();
+    }
+
+    function removeExtraImage(idx) {
+        editingExtraImages.splice(idx, 1);
+        document.getElementById('f_imageUrls').value = editingExtraImages.join('\n');
+        renderExtraImages();
+    }
+
+    function renderMainImage() {
+        const url = document.getElementById('f_imageUrl').value.trim();
+        const preview = document.getElementById('mainImagePreview');
+        if (url) {
+            const fullUrl = fullImageUrl(url);
+            preview.innerHTML = `<img src="${fullUrl}" class="w-full h-full object-cover rounded-lg" onerror="this.parentElement.innerHTML='<span class=\\'text-[10px] text-red-500\\'>Lỗi</span>'"/>`;
+            preview.classList.remove('bg-gray-50');
+            preview.classList.add('bg-white');
+        } else {
+            preview.innerHTML = 'Preview';
+            preview.classList.remove('bg-white');
+            preview.classList.add('bg-gray-50');
+        }
+    }
+
+    function renderExtraImages() {
+        const grid = document.getElementById('extraImagesGrid');
+        if (!editingExtraImages.length) {
+            grid.innerHTML = '';
+            return;
+        }
+        grid.innerHTML = editingExtraImages.map((url, i) => `
+            <div class="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 group border border-gray-200">
+                <img src="${fullImageUrl(url)}" class="w-full h-full object-cover" onerror="this.outerHTML='<div class=\\'flex items-center justify-center w-full h-full text-red-400 text-[10px]\\'>Lỗi</div>'"/>
+                <button type="button" onclick="removeExtraImage(${i})"
+                    class="absolute top-0.5 right-0.5 w-5 h-5 bg-red-600 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition flex items-center justify-center">×</button>
+            </div>`).join('');
+    }
+
+    // ===== CATEGORIES =====
+    async function loadCategories() {
+        try {
+            categories = await api('/categories');
+            const select = document.getElementById('f_category');
+            select.innerHTML = '<option value="">-- Chọn danh mục --</option>' +
+                categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+
+    function renderCategories() {
+        document.getElementById('categoryCount').textContent = `${categories.length} danh mục`;
+        document.getElementById('categoryGrid').innerHTML = categories.map(c => `
+            <div class="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-lg transition">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-black">${c.name}</h3>
+                    <span class="text-xs bg-gray-100 px-2 py-1 rounded font-semibold">${c.productCount} SP</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="editCategory(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="flex-1 text-sm font-semibold text-blue-600 hover:bg-blue-50 py-2 rounded">Sửa</button>
+                    <button onclick="deleteCategory(${c.id})" class="flex-1 text-sm font-semibold text-red-600 hover:bg-red-50 py-2 rounded">Xóa</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function openCategoryModal() {
+        document.getElementById('catModalTitle').textContent = 'Thêm danh mục';
+        document.getElementById('categoryId').value = '';
+        document.getElementById('cat_name').value = '';
+        document.getElementById('categoryModal').classList.remove('hidden');
+    }
+    function closeCategoryModal() {
+        document.getElementById('categoryModal').classList.add('hidden');
+    }
+    function editCategory(id, name) {
+        document.getElementById('catModalTitle').textContent = 'Sửa danh mục';
+        document.getElementById('categoryId').value = id;
+        document.getElementById('cat_name').value = name;
+        document.getElementById('categoryModal').classList.remove('hidden');
+    }
+    async function deleteCategory(id) {
+        const c = categories.find(x => x.id === id);
+        if (!confirm(`Xóa danh mục "${c.name}"?\n\nTất cả sản phẩm trong danh mục sẽ bị xóa luôn!`)) return;
+        try {
+            await api(`/categories/${id}`, { method: 'DELETE' });
+            showToast('Đã xóa danh mục');
+            await loadCategories();
+            await loadProducts();
+            renderCategories();
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+    document.getElementById('categoryForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('categoryId').value;
+        const name = document.getElementById('cat_name').value;
+        try {
+            if (id) {
+                await api(`/categories/${id}`, { method: 'PUT', body: JSON.stringify({ id: parseInt(id), name }) });
+                showToast('Đã cập nhật danh mục');
+            } else {
+                await api('/categories', { method: 'POST', body: JSON.stringify({ name }) });
+                showToast('Đã thêm danh mục');
+            }
+            closeCategoryModal();
+            await loadCategories();
+            renderCategories();
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    });
+
+    // ===== STARTUP =====
+    if (token && currentUser && currentUser.role === 'Admin') {
+        initApp();
+    }
+</script>
+
+</body>
+</html>
