@@ -1,4 +1,4 @@
-# ADLV Store — Web Bán Hàng Full-stack
+# ADLV Store — Web Bán Hàng
 
 Dự án web bán quần áo, giày dép theo phong cách streetwear ADLV (acmedelavie.com.vn). Đồ án sinh viên, full-stack: .NET 8 Web API + Frontend HTML thuần.
 
