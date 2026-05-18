@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using backend.Data;
@@ -16,62 +17,105 @@ namespace backend.Controllers
             _context = context;
         }
 
-        // GET: api/products/search?query=quần jordan
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            return Ok(await _context.Products.Include(p => p.Category).ToListAsync());
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.Category)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (product == null) return NotFound();
+            return Ok(product);
+        }
+
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<Product>>> SearchProducts([FromQuery] string? query)
         {
-            // Tự động thêm dữ liệu mẫu nếu chưa có gì trong DB
-            await SeedDataAsync();
-
-            // Nếu không gõ từ khóa nào, trả về toàn bộ sản phẩm
             if (string.IsNullOrWhiteSpace(query))
             {
                 return await _context.Products.Include(p => p.Category).ToListAsync();
             }
 
-            // Tách chuỗi thành các từ khóa riêng biệt (ví dụ: "quần jordan" -> ["quần", "jordan"])
             var keywords = query.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
             var result = _context.Products.Include(p => p.Category).AsQueryable();
 
-            // Duyệt qua từng từ khóa để lọc (thỏa mãn CẢ 2 hoặc NHIỀU từ khóa)
             foreach (var keyword in keywords)
             {
-                result = result.Where(p => p.Name.ToLower().Contains(keyword) 
-                                        || p.Description.ToLower().Contains(keyword)
-                                        || (p.Category != null && p.Category.Name.ToLower().Contains(keyword)));
+                result = result.Where(p =>
+                    p.Name.ToLower().Contains(keyword) ||
+                    p.Description.ToLower().Contains(keyword) ||
+                    p.Brand.ToLower().Contains(keyword) ||
+                    p.Sku.ToLower().Contains(keyword) ||
+                    (p.Category != null && p.Category.Name.ToLower().Contains(keyword)));
             }
 
             return Ok(await result.ToListAsync());
         }
 
-        // Hàm hỗ trợ tự động bơm dữ liệu (Đã sửa lỗi vòng lặp Object)
-        private async Task SeedDataAsync()
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Create([FromBody] Product product)
         {
-            if (!await _context.Categories.AnyAsync())
-            {
-                // 1. Tạo và lưu Danh mục trước để lấy ID thực tế từ DB
-                var ao = new Category { Name = "Áo" };
-                var quan = new Category { Name = "Quần" };
-                var giay = new Category { Name = "Giày" };
-                var non = new Category { Name = "Nón" };
+            product.CreatedAt = DateTime.UtcNow;
+            product.UpdatedAt = DateTime.UtcNow;
+            _context.Products.Add(product);
+            await _context.SaveChangesAsync();
 
-                await _context.Categories.AddRangeAsync(ao, quan, giay, non);
-                await _context.SaveChangesAsync();
+            var created = await _context.Products
+                .Include(p => p.Category)
+                .FirstOrDefaultAsync(p => p.Id == product.Id);
+            return CreatedAtAction(nameof(GetById), new { id = product.Id }, created);
+        }
 
-                // 2. Dùng đúng ID đã sinh ra để gán cho sản phẩm
-                var products = new List<Product>
-                {
-                    new Product { Name = "Áo Thun Nike Jordan T-Shirt", Price = 550000, Description = "Áo thun cotton chính hãng Jordan", CategoryId = ao.Id, ImageUrl = "ao_jordan.jpg" },
-                    new Product { Name = "Quần Short Thể Thao Jordan Pro", Price = 650000, Description = "Quần short thoáng khí thương hiệu Jordan Air", CategoryId = quan.Id, ImageUrl = "quan_jordan.jpg" },
-                    new Product { Name = "Quần Dài Jean Levi's Slim Fit", Price = 1200000, Description = "Quần jean chất bò cao cấp", CategoryId = quan.Id, ImageUrl = "quan_jean.jpg" },
-                    new Product { Name = "Giày Sneaker Air Jordan 1 Low", Price = 3500000, Description = "Giày cổ thấp phối màu đen trắng hot trend", CategoryId = giay.Id, ImageUrl = "giay_jordan.jpg" },
-                    new Product { Name = "Nón Lưỡi Trai Adidas Originals", Price = 350000, Description = "Nón kết thể thao Adidas", CategoryId = non.Id, ImageUrl = "non_adidas.jpg" }
-                };
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Update(int id, [FromBody] Product input)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
 
-                await _context.Products.AddRangeAsync(products);
-                await _context.SaveChangesAsync();
-            }
+            product.Name = input.Name;
+            product.Sku = input.Sku;
+            product.Price = input.Price;
+            product.SalePrice = input.SalePrice;
+            product.Description = input.Description;
+            product.ImageUrl = input.ImageUrl;
+            product.ImageUrls = input.ImageUrls;
+            product.Brand = input.Brand;
+            product.Material = input.Material;
+            product.Fit = input.Fit;
+            product.CareInstructions = input.CareInstructions;
+            product.Notes = input.Notes;
+            product.Sizes = input.Sizes;
+            product.Colors = input.Colors;
+            product.Stock = input.Stock;
+            product.IsNew = input.IsNew;
+            product.IsBestseller = input.IsBestseller;
+            product.CategoryId = input.CategoryId;
+            product.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            var updated = await _context.Products
+                .Include(p => p.Category)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            return Ok(updated);
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+            return NoContent();
         }
     }
 }

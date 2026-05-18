@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Danh mục - ADLV Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #FFFFFF; color: #111111; }
+        .product-card .img-hover { transition: opacity 0.4s ease; opacity: 0; }
+        .product-card:hover .img-hover { opacity: 1; }
+        .product-card .add-btn { transition: all 0.3s ease; opacity: 0; transform: translateY(8px); }
+        .product-card:hover .add-btn { opacity: 1; transform: translateY(0); }
+        .product-image { background: linear-gradient(135deg, var(--c1), var(--c2)); }
+        .nav-link { position: relative; }
+        .nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: #111; transition: width 0.25s ease; }
+        .nav-link:hover::after, .nav-link.current::after { width: 100%; }
+        .badge-sale { background: #FF2D2D; }
+        .badge-new { background: #111; }
+        .badge-best { background: #F472B6; }
+        .heart-btn:hover svg { fill: #FF2D2D; stroke: #FF2D2D; }
+        .skeleton { background: linear-gradient(90deg, #f5f5f5 25%, #ebebeb 50%, #f5f5f5 75%); background-size: 200% 100%; animation: skl 1.4s infinite; }
+        @keyframes skl { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+        .filter-chip { transition: all 0.15s; }
+        .filter-chip.active { background: #111; color: white; border-color: #111; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- TOP PROMO -->
+    <div class="bg-[#FFE600] text-black text-xs font-semibold py-2.5 text-center">
+        🎁 GIẢM 10% CHO ĐƠN HÀNG ĐẦU TIÊN — MÃ: NEWTOADLV
+    </div>
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-50 bg-white border-b border-gray-100">
+        <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="index.html" class="text-2xl font-black tracking-tighter">ADLV<span class="text-red-600">.</span></a>
+
+            <nav class="hidden lg:flex items-center gap-7 text-[13px] font-semibold uppercase tracking-wide" id="mainNav">
+                <a href="category.html?type=sale" class="nav-link text-red-600" data-type="sale">END OF SEASON SALE</a>
+                <a href="category.html?type=moi" class="nav-link" data-type="moi">Mới</a>
+                <a href="category.html?type=ban-chay" class="nav-link" data-type="ban-chay">Bán chạy</a>
+                <a href="category.html?type=ao" class="nav-link" data-type="ao">Áo</a>
+                <a href="category.html?type=quan" class="nav-link" data-type="quan">Quần</a>
+                <a href="category.html?type=giay" class="nav-link" data-type="giay">Giày</a>
+                <a href="category.html?type=phu-kien" class="nav-link" data-type="phu-kien">Phụ kiện</a>
+                <a href="category.html?type=all" class="nav-link" data-type="all">Bộ sưu tập</a>
+            </nav>
+
+            <div class="flex items-center gap-5">
+                <a id="dashboardLink" href="admin.html" class="hidden items-center gap-1.5 bg-black text-white text-xs font-bold uppercase px-3 py-2 rounded-full hover:bg-red-600 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+                    Dashboard
+                </a>
+                <a href="index.html" id="loginBtn" aria-label="Tài khoản" title="Đăng nhập">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </a>
+                <button class="relative" aria-label="Giỏ hàng">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <span class="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- BREADCRUMB -->
+    <div class="max-w-[1400px] mx-auto px-6 pt-8 pb-2">
+        <nav class="text-xs text-gray-500 flex items-center gap-2">
+            <a href="index.html" class="hover:text-black">Trang chủ</a>
+            <span>/</span>
+            <span class="text-black font-semibold" id="breadcrumb">Danh mục</span>
+        </nav>
+    </div>
+
+    <!-- PAGE HEADER -->
+    <section class="max-w-[1400px] mx-auto px-6 pt-6 pb-10 border-b border-gray-200">
+        <div class="flex items-end justify-between flex-wrap gap-4">
+            <div>
+                <h1 class="text-4xl md:text-5xl font-black uppercase tracking-tight" id="pageHeading">Danh mục</h1>
+                <p class="text-sm text-gray-500 mt-2" id="pageSubtitle">Đang tải...</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <label class="text-xs uppercase font-bold text-gray-600">Sắp xếp:</label>
+                <select id="sortSelect" class="border border-gray-200 px-4 py-2 rounded-lg text-sm focus:outline-none focus:border-black">
+                    <option value="newest">Mới nhất</option>
+                    <option value="price-asc">Giá tăng dần</option>
+                    <option value="price-desc">Giá giảm dần</option>
+                    <option value="name">Tên A-Z</option>
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- MAIN -->
+    <section class="max-w-[1400px] mx-auto px-6 py-10">
+        <div class="grid lg:grid-cols-[240px_1fr] gap-10">
+            <!-- SIDEBAR FILTERS -->
+            <aside class="space-y-8">
+                <div>
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-4 pb-2 border-b border-gray-200">Khoảng giá</h3>
+                    <div class="space-y-2" id="priceFilters">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm hover:text-red-600">
+                            <input type="radio" name="price" value="all" checked class="accent-black"/> Tất cả
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm hover:text-red-600">
+                            <input type="radio" name="price" value="0-500000" class="accent-black"/> Dưới 500.000₫
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm hover:text-red-600">
+                            <input type="radio" name="price" value="500000-1000000" class="accent-black"/> 500K - 1 triệu
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm hover:text-red-600">
+                            <input type="radio" name="price" value="1000000-2000000" class="accent-black"/> 1 - 2 triệu
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer text-sm hover:text-red-600">
+                            <input type="radio" name="price" value="2000000-99999999" class="accent-black"/> Trên 2 triệu
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-4 pb-2 border-b border-gray-200">Size</h3>
+                    <div class="flex flex-wrap gap-2" id="sizeFilters"></div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-black uppercase tracking-widest mb-4 pb-2 border-b border-gray-200">Thương hiệu</h3>
+                    <div class="space-y-2" id="brandFilters"></div>
+                </div>
+
+                <button onclick="resetFilters()" class="text-xs uppercase font-bold text-gray-500 hover:text-red-600 underline">Xóa bộ lọc</button>
+            </aside>
+
+            <!-- PRODUCT GRID -->
+            <div>
+                <div id="productGrid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-10"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-black text-white mt-20">
+        <div class="max-w-[1400px] mx-auto px-6 py-12 grid md:grid-cols-3 gap-10">
+            <div>
+                <div class="text-2xl font-black tracking-tighter mb-3">ADLV<span class="text-red-500">.</span></div>
+                <p class="text-gray-400 text-sm">Cửa hàng thời trang streetwear cao cấp chính hãng.</p>
+            </div>
+            <div>
+                <div class="text-xs uppercase tracking-widest font-bold mb-3">Hỗ trợ</div>
+                <ul class="space-y-1.5 text-sm text-gray-400">
+                    <li><a href="#" class="hover:text-white">Hướng dẫn mua hàng</a></li>
+                    <li><a href="#" class="hover:text-white">Đổi trả</a></li>
+                    <li><a href="admin.html" class="hover:text-white text-gray-500">Admin Panel</a></li>
+                </ul>
+            </div>
+            <div>
+                <div class="text-xs uppercase tracking-widest font-bold mb-3">Liên hệ</div>
+                <ul class="space-y-1.5 text-sm text-gray-400">
+                    <li>hello@adlvstore.io</li>
+                    <li>Hotline: 1900 0000</li>
+                </ul>
+            </div>
+        </div>
+        <div class="border-t border-white/10 py-4 text-center text-xs text-gray-500">© 2026 ADLV STORE.</div>
+    </footer>
+
+    <script>
+        const API_HOST = 'http://localhost:5083';
+        const API = API_HOST + '/api';
+
+        const GRADIENTS = [
+            ['#1F2937', '#374151'], ['#7C2D12', '#EA580C'], ['#064E3B', '#10B981'],
+            ['#1E3A8A', '#3B82F6'], ['#581C87', '#A855F7'], ['#831843', '#EC4899'], ['#713F12', '#F59E0B']
+        ];
+
+        // CONFIG mỗi loại route
+        const TYPE_CONFIG = {
+            'ao':        { title: 'Áo',                  category: 'áo',   subtitle: 'Áo thun, sơ mi, áo khoác' },
+            'quan':      { title: 'Quần',                category: 'quần', subtitle: 'Quần jean, quần short, quần dài' },
+            'giay':      { title: 'Giày',                category: 'giày', subtitle: 'Sneaker, dép, sandal' },
+            'phu-kien':  { title: 'Phụ kiện',            category: 'nón',  subtitle: 'Nón, túi, mắt kính' },
+            'moi':       { title: 'Hàng Mới',            filter: 'new',    subtitle: 'Sản phẩm mới về' },
+            'ban-chay':  { title: 'Bán Chạy',            filter: 'best',   subtitle: 'Sản phẩm được ưa chuộng nhất' },
+            'sale':      { title: 'End Of Season Sale',  filter: 'sale',   subtitle: 'Sản phẩm đang giảm giá' },
+            'all':       { title: 'Bộ Sưu Tập',          subtitle: 'Toàn bộ sản phẩm' }
+        };
+
+        function fullImageUrl(url) {
+            if (!url) return null;
+            if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+            if (url.startsWith('/')) return API_HOST + url;
+            return url;
+        }
+
+        function getParam(name) {
+            const url = new URL(window.location.href);
+            return url.searchParams.get(name);
+        }
+
+        let allProducts = [];
+        let filteredProducts = [];
+        let currentType = getParam('type') || 'all';
+        let activeFilters = { price: 'all', sizes: new Set(), brands: new Set() };
+
+        async function load() {
+            const config = TYPE_CONFIG[currentType] || TYPE_CONFIG['all'];
+            document.title = `${config.title} - ADLV Store`;
+            document.getElementById('pageHeading').textContent = config.title;
+            document.getElementById('breadcrumb').textContent = config.title;
+
+            // Highlight nav link hiện tại
+            document.querySelectorAll('[data-type]').forEach(a => {
+                a.classList.toggle('current', a.dataset.type === currentType);
+            });
+
+            // Skeleton
+            document.getElementById('productGrid').innerHTML = Array(8).fill(0).map(() => `
+                <div>
+                    <div class="aspect-square skeleton mb-3"></div>
+                    <div class="h-3 skeleton w-1/3 mb-2"></div>
+                    <div class="h-4 skeleton w-3/4 mb-2"></div>
+                    <div class="h-4 skeleton w-1/4"></div>
+                </div>`).join('');
+
+            try {
+                const res = await fetch(API + '/products');
+                allProducts = await res.json();
+
+                // Lọc theo type
+                if (config.category) {
+                    allProducts = allProducts.filter(p => p.category && p.category.name.toLowerCase().includes(config.category));
+                } else if (config.filter === 'new') {
+                    allProducts = allProducts.filter(p => p.isNew);
+                } else if (config.filter === 'best') {
+                    allProducts = allProducts.filter(p => p.isBestseller);
+                } else if (config.filter === 'sale') {
+                    allProducts = allProducts.filter(p => p.salePrice);
+                }
+
+                buildFilters();
+                applyFilters();
+            } catch (err) {
+                document.getElementById('productGrid').innerHTML = `<div class="col-span-full text-center py-16 text-red-600 font-semibold">Lỗi kết nối backend</div>`;
+            }
+        }
+
+        function buildFilters() {
+            // Sizes
+            const sizes = new Set();
+            const brands = new Set();
+            allProducts.forEach(p => {
+                (p.sizes || '').split(',').map(s => s.trim()).filter(s => s).forEach(s => sizes.add(s));
+                if (p.brand) brands.add(p.brand);
+            });
+
+            document.getElementById('sizeFilters').innerHTML = [...sizes].map(s =>
+                `<button class="filter-chip border border-gray-200 px-3 py-1.5 text-xs font-semibold rounded" data-size="${s}">${s}</button>`
+            ).join('') || '<span class="text-xs text-gray-400">Không có</span>';
+
+            document.getElementById('brandFilters').innerHTML = [...brands].map(b => `
+                <label class="flex items-center gap-2 cursor-pointer text-sm hover:text-red-600">
+                    <input type="checkbox" class="accent-black brand-filter" value="${b}"/> ${b}
+                </label>
+            `).join('') || '<span class="text-xs text-gray-400">Không có</span>';
+
+            // Wire size chips
+            document.querySelectorAll('[data-size]').forEach(btn => {
+                btn.onclick = () => {
+                    const s = btn.dataset.size;
+                    if (activeFilters.sizes.has(s)) {
+                        activeFilters.sizes.delete(s);
+                        btn.classList.remove('active');
+                    } else {
+                        activeFilters.sizes.add(s);
+                        btn.classList.add('active');
+                    }
+                    applyFilters();
+                };
+            });
+
+            // Wire brand checkboxes
+            document.querySelectorAll('.brand-filter').forEach(cb => {
+                cb.onchange = () => {
+                    if (cb.checked) activeFilters.brands.add(cb.value);
+                    else activeFilters.brands.delete(cb.value);
+                    applyFilters();
+                };
+            });
+
+            // Wire price radios
+            document.querySelectorAll('input[name=price]').forEach(r => {
+                r.onchange = () => { activeFilters.price = r.value; applyFilters(); };
+            });
+
+            // Wire sort
+            document.getElementById('sortSelect').onchange = applyFilters;
+        }
+
+        function applyFilters() {
+            filteredProducts = allProducts.filter(p => {
+                // Price
+                if (activeFilters.price !== 'all') {
+                    const [min, max] = activeFilters.price.split('-').map(Number);
+                    const effectivePrice = p.salePrice || p.price;
+                    if (effectivePrice < min || effectivePrice > max) return false;
+                }
+                // Sizes
+                if (activeFilters.sizes.size > 0) {
+                    const psizes = (p.sizes || '').split(',').map(s => s.trim());
+                    if (![...activeFilters.sizes].some(s => psizes.includes(s))) return false;
+                }
+                // Brands
+                if (activeFilters.brands.size > 0 && !activeFilters.brands.has(p.brand)) return false;
+                return true;
+            });
+
+            // Sort
+            const sort = document.getElementById('sortSelect').value;
+            if (sort === 'price-asc') filteredProducts.sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price));
+            else if (sort === 'price-desc') filteredProducts.sort((a, b) => (b.salePrice || b.price) - (a.salePrice || a.price));
+            else if (sort === 'name') filteredProducts.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+            else filteredProducts.sort((a, b) => b.id - a.id);
+
+            renderGrid();
+        }
+
+        function resetFilters() {
+            activeFilters = { price: 'all', sizes: new Set(), brands: new Set() };
+            document.querySelector('input[name=price][value=all]').checked = true;
+            document.querySelectorAll('[data-size]').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.brand-filter').forEach(cb => cb.checked = false);
+            document.getElementById('sortSelect').value = 'newest';
+            applyFilters();
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('productGrid');
+            document.getElementById('pageSubtitle').textContent =
+                `${filteredProducts.length} sản phẩm` +
+                (allProducts.length !== filteredProducts.length ? ` (đã lọc từ ${allProducts.length})` : '');
+
+            if (!filteredProducts.length) {
+                grid.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400">
+                    <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    <div class="font-medium">Không có sản phẩm phù hợp</div>
+                    <button onclick="resetFilters()" class="mt-3 text-sm text-red-600 underline">Xóa bộ lọc</button>
+                </div>`;
+                return;
+            }
+
+            grid.innerHTML = filteredProducts.map((p, idx) => {
+                const [c1, c2] = GRADIENTS[idx % GRADIENTS.length];
+                const [c3, c4] = GRADIENTS[(idx + 3) % GRADIENTS.length];
+                const initial = (p.brand || p.name).charAt(0).toUpperCase();
+                const mainImg = fullImageUrl(p.imageUrl);
+                const extras = (p.imageUrls || '').split(',').map(s => s.trim()).filter(s => s);
+                const hoverImg = extras.length ? fullImageUrl(extras[0]) : null;
+
+                let badge = '';
+                if (p.salePrice) badge = `<span class="badge-sale text-white text-[10px] font-bold uppercase px-2 py-1">Sale</span>`;
+                else if (p.isNew) badge = `<span class="badge-new text-white text-[10px] font-bold uppercase px-2 py-1">New</span>`;
+                else if (p.isBestseller) badge = `<span class="badge-best text-white text-[10px] font-bold uppercase px-2 py-1">Hot</span>`;
+
+                const mainLayer = mainImg
+                    ? `<img src="${mainImg}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover" onerror="this.style.display='none'"/>`
+                    : `<div class="product-image absolute inset-0 flex items-center justify-center text-white text-7xl font-black" style="--c1:${c1};--c2:${c2}">${initial}</div>`;
+                const hoverLayer = hoverImg
+                    ? `<img src="${hoverImg}" class="img-hover absolute inset-0 w-full h-full object-cover"/>`
+                    : '';
+
+                const outOfStock = p.stock <= 0;
+
+                return `
+                <a href="product.html?id=${p.id}" class="product-card group cursor-pointer block">
+                    <div class="relative aspect-square overflow-hidden bg-gray-100 mb-3">
+                        ${mainLayer}${hoverLayer}
+                        ${badge ? `<div class="absolute top-3 left-3">${badge}</div>` : ''}
+                        <button onclick="event.preventDefault(); event.stopPropagation();" class="heart-btn absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center hover:bg-white">
+                            <svg class="w-4 h-4" fill="none" stroke="#111" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/></svg>
+                        </button>
+                        <button onclick="event.preventDefault(); event.stopPropagation();" class="add-btn absolute bottom-3 left-3 right-3 bg-black text-white text-xs font-bold uppercase py-3 hover:bg-red-600 ${outOfStock ? 'opacity-50' : ''}" ${outOfStock ? 'disabled' : ''}>
+                            ${outOfStock ? 'Hết hàng' : '+ Thêm vào giỏ'}
+                        </button>
+                    </div>
+                    <div class="text-[10px] uppercase tracking-widest text-gray-500 font-semibold mb-1">${p.brand || (p.category ? p.category.name : 'ADLV')}</div>
+                    <h3 class="text-sm font-medium leading-snug mb-1 line-clamp-2 group-hover:text-red-600 transition">${p.name}</h3>
+                    ${p.salePrice
+                        ? `<div class="flex items-center gap-2"><span class="font-bold text-sm text-red-600">${p.salePrice.toLocaleString('vi-VN')} ₫</span><span class="text-xs text-gray-400 line-through">${p.price.toLocaleString('vi-VN')} ₫</span></div>`
+                        : `<div class="font-bold text-sm">${p.price.toLocaleString('vi-VN')} ₫</div>`}
+                </a>`;
+            }).join('');
+        }
+
+        // Refresh auth UI (Dashboard button)
+        function refreshAuthUI() {
+            const userJson = localStorage.getItem('admin_user');
+            const dashLink = document.getElementById('dashboardLink');
+            const loginBtn = document.getElementById('loginBtn');
+            if (userJson) {
+                try {
+                    const u = JSON.parse(userJson);
+                    if (u && u.role === 'Admin') {
+                        dashLink.classList.remove('hidden');
+                        dashLink.classList.add('flex');
+                        loginBtn.classList.add('hidden');
+                    }
+                } catch {}
+            }
+        }
+
+        refreshAuthUI();
+        load();
+    </script>
+</body>
+</html>
