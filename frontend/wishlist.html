@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yêu thích - ADLV Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #FAFAFA; color: #111; }
+        .product-card .img-hover { transition: opacity 0.4s ease; opacity: 0; }
+        .product-card:hover .img-hover { opacity: 1; }
+        .skeleton { background: linear-gradient(90deg, #f5f5f5 25%, #ebebeb 50%, #f5f5f5 75%); background-size: 200% 100%; animation: skl 1.4s infinite; }
+        @keyframes skl { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-100">
+        <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="index.html" class="block flex-shrink-0"><img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-10 w-auto"/></a>
+            <nav class="hidden lg:flex items-center gap-7 text-[13px] font-semibold uppercase tracking-wide">
+                <a href="index.html" class="hover:text-red-600">Trang chủ</a>
+                <a href="category.html?type=all" class="hover:text-red-600">Sản phẩm</a>
+                <a href="account.html" class="hover:text-red-600">Tài khoản</a>
+                <a href="orders.html" class="hover:text-red-600">Đơn hàng</a>
+            </nav>
+            <div class="flex items-center gap-3">
+                <button onclick="Notifications.openDropdown()" class="relative" aria-label="Thông báo">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span class="notif-badge absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center" style="display:none">0</span>
+                </button>
+                <button onclick="Cart.openDrawer()" class="relative">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <span class="cart-badge absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <script src="assets/js/cart.js"></script>
+
+    <main class="max-w-[1400px] mx-auto px-6 py-10">
+        <div class="flex items-end justify-between mb-8">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-black uppercase tracking-tight">Sản phẩm yêu thích</h1>
+                <p class="text-gray-500 text-sm mt-1" id="countLabel">—</p>
+            </div>
+            <button id="clearBtn" onclick="clearAll()" class="hidden text-sm text-red-600 hover:underline font-semibold">Xóa tất cả</button>
+        </div>
+
+        <div id="emptyState" class="hidden max-w-3xl mx-auto py-16">
+            <div class="text-center mb-12">
+                <svg class="w-20 h-20 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/></svg>
+                <h2 class="text-2xl font-black mb-3">Chưa có sản phẩm yêu thích</h2>
+                <p class="text-gray-500">Bấm vào icon trái tim ❤️ trên bất kỳ sản phẩm nào để thêm</p>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-gray-100 p-8">
+                <div class="text-xs uppercase tracking-widest text-gray-500 font-bold mb-4 text-center">Yêu thích để làm gì?</div>
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">📌</div>
+                        <h3 class="font-bold text-sm mb-1">Lưu lại sản phẩm</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Đánh dấu các sản phẩm bạn quan tâm để xem lại bất cứ lúc nào — không lo bị quên.</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">🔔</div>
+                        <h3 class="font-bold text-sm mb-1">Nhận thông báo giảm giá</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Khi sản phẩm yêu thích có khuyến mãi, bạn sẽ nhận thông báo ngay qua chuông trên header.</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">🎯</div>
+                        <h3 class="font-bold text-sm mb-1">Mua hàng nhanh hơn</h3>
+                        <p class="text-xs text-gray-500 leading-relaxed">Khi cần mua, vào trang Yêu thích là có ngay — không phải tìm lại từ đầu.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-10">
+                <a href="category.html?type=all" class="inline-block bg-black text-white font-bold uppercase px-8 py-3 hover:bg-red-600 transition">Khám phá sản phẩm</a>
+            </div>
+        </div>
+
+        <div id="grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-10"></div>
+    </main>
+
+    <script>
+        const API_HOST = 'http://localhost:5083';
+        function fullImageUrl(u) {
+            if (!u) return null;
+            if (u.startsWith('http')) return u;
+            if (u.startsWith('/')) return API_HOST + u;
+            return u;
+        }
+        function fmt(n) { return Math.round(n).toLocaleString('vi-VN') + '₫'; }
+
+        async function load() {
+            const ids = Wishlist.getAll();
+            document.getElementById('countLabel').textContent = `${ids.length} sản phẩm`;
+
+            if (!ids.length) {
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('grid').classList.add('hidden');
+                document.getElementById('clearBtn').classList.add('hidden');
+                return;
+            }
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('grid').classList.remove('hidden');
+            document.getElementById('clearBtn').classList.remove('hidden');
+
+            // Skeleton
+            document.getElementById('grid').innerHTML = ids.map(() => `
+                <div>
+                    <div class="aspect-square skeleton mb-3"></div>
+                    <div class="h-3 skeleton w-1/3 mb-2"></div>
+                    <div class="h-4 skeleton w-3/4"></div>
+                </div>`).join('');
+
+            // Fetch all products in parallel
+            const products = await Promise.all(ids.map(async id => {
+                try {
+                    const r = await fetch(`${API_HOST}/api/products/${id}`);
+                    if (!r.ok) return null;
+                    return await r.json();
+                } catch { return null; }
+            }));
+
+            const valid = products.filter(p => p !== null);
+            // Cleanup deleted product IDs from wishlist
+            const validIds = valid.map(p => p.id);
+            ids.forEach(id => { if (!validIds.includes(id)) Wishlist.remove(id); });
+
+            renderGrid(valid);
+        }
+
+        function renderGrid(products) {
+            if (!products.length) {
+                document.getElementById('emptyState').classList.remove('hidden');
+                document.getElementById('grid').classList.add('hidden');
+                return;
+            }
+            document.getElementById('grid').innerHTML = products.map(p => {
+                const img = fullImageUrl(p.imageUrl);
+                const initial = (p.brand || p.name).charAt(0).toUpperCase();
+                return `
+                <div class="product-card group">
+                    <a href="product.html?id=${p.id}" class="block relative aspect-square overflow-hidden bg-gray-100 mb-3">
+                        ${img
+                            ? `<img src="${img}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover"/>`
+                            : `<div class="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-black text-6xl">${initial}</div>`}
+                        <button onclick="event.preventDefault(); event.stopPropagation(); Wishlist.remove(${p.id}); load();"
+                            class="absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center hover:bg-white"
+                            title="Bỏ yêu thích">
+                            <svg class="w-4 h-4" fill="#DC2626" stroke="#DC2626" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/></svg>
+                        </button>
+                    </a>
+                    <div class="text-[10px] uppercase tracking-widest text-gray-500 font-semibold">${p.brand || 'ADLV'}</div>
+                    <a href="product.html?id=${p.id}" class="text-sm font-medium leading-snug line-clamp-2 hover:text-red-600 transition block">${p.name}</a>
+                    ${p.salePrice
+                        ? `<div class="flex items-center gap-2 mt-1"><span class="text-red-600 font-bold text-sm">${fmt(p.salePrice)}</span><span class="text-gray-400 text-xs line-through">${fmt(p.price)}</span></div>`
+                        : `<div class="font-bold text-sm mt-1">${fmt(p.price)}</div>`}
+                </div>`;
+            }).join('');
+        }
+
+        function clearAll() {
+            if (!confirm(`Xóa tất cả ${Wishlist.getCount()} sản phẩm yêu thích?`)) return;
+            Wishlist.getAll().forEach(id => Wishlist.remove(id));
+            load();
+        }
+
+        Wishlist.on(load);
+        load();
+    </script>
+</body>
+</html>

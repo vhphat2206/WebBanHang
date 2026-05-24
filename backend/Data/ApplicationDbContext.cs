@@ -12,6 +12,9 @@ namespace backend.Data
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<UserVoucher> UserVouchers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -25,6 +28,26 @@ namespace backend.Data
 
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Username)
+                .IsUnique();
+
+            modelBuilder.Entity<Order>()
+                .HasMany(o => o.Items)
+                .WithOne(i => i.Order)
+                .HasForeignKey(i => i.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<OrderItem>()
+                .HasOne(i => i.Product)
+                .WithMany()
+                .HasForeignKey(i => i.ProductId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Order>()
+                .HasIndex(o => o.OrderCode)
+                .IsUnique();
+
+            modelBuilder.Entity<UserVoucher>()
+                .HasIndex(v => v.Code)
                 .IsUnique();
         }
     }

@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn hàng thành công - ADLV Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #FFFFFF; color: #111; min-height: 100vh; }
+        .serif { font-family: 'Playfair Display', serif; }
+
+        /* Header tối giản */
+        .nav-link { position: relative; }
+        .nav-link::after { content:''; position:absolute; bottom:-4px; left:0; width:0; height:2px; background:#111; transition:width .25s; }
+        .nav-link:hover::after { width:100%; }
+
+        /* ===== Checkmark animation ===== */
+        .check-wrap {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .checkmark {
+            width: 120px;
+            height: 120px;
+            display: block;
+        }
+        .checkmark__circle {
+            stroke: #111;
+            stroke-width: 1.5;
+            stroke-dasharray: 166;
+            stroke-dashoffset: 166;
+            fill: none;
+            animation: stroke-draw 0.7s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+        .checkmark__check {
+            stroke: #111;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            fill: none;
+            animation: stroke-draw 0.4s 0.7s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+        }
+        @keyframes stroke-draw {
+            to { stroke-dashoffset: 0; }
+        }
+
+        /* Pulse halo nhẹ phía sau (subtle effect) */
+        .check-wrap::before {
+            content: '';
+            position: absolute;
+            inset: -20px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.06);
+            animation: pulse 2s 1s ease-out infinite;
+            opacity: 0;
+        }
+        @keyframes pulse {
+            0% { opacity: 0; transform: scale(0.9); }
+            50% { opacity: 1; }
+            100% { opacity: 0; transform: scale(1.4); }
+        }
+
+        /* Content fade-in từng phần */
+        .fade-1 { animation: fadeUp 0.6s 1.0s both; }
+        .fade-2 { animation: fadeUp 0.6s 1.2s both; }
+        .fade-3 { animation: fadeUp 0.6s 1.4s both; }
+        .fade-4 { animation: fadeUp 0.6s 1.6s both; }
+        .fade-5 { animation: fadeUp 0.6s 1.8s both; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Confetti tinh tế: dot rơi xuống */
+        .dot {
+            position: absolute;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            opacity: 0;
+            animation: confetti 2.5s ease-out forwards;
+        }
+        @keyframes confetti {
+            0%   { opacity: 0; transform: translateY(0) rotate(0deg); }
+            10%  { opacity: 1; }
+            100% { opacity: 0; transform: translateY(400px) rotate(360deg); }
+        }
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 0.9; transform: scale(1.2); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header tối giản -->
+    <header class="border-b border-gray-100">
+        <div class="max-w-[1400px] mx-auto px-6 py-5 flex items-center justify-between">
+            <nav class="hidden md:flex items-center gap-8 text-[13px] font-semibold uppercase tracking-widest">
+                <a href="category.html?type=all" class="nav-link">Bộ sưu tập</a>
+                <a href="category.html?type=ao" class="nav-link">Áo</a>
+                <a href="category.html?type=quan" class="nav-link">Quần</a>
+                <a href="category.html?type=phu-kien" class="nav-link">Phụ kiện</a>
+            </nav>
+            <a href="index.html" class="absolute left-1/2 -translate-x-1/2 text-2xl font-black tracking-[0.3em]">ADLV</a>
+            <div class="flex items-center gap-5 text-[13px] font-semibold uppercase tracking-wider">
+                <a href="cart.html" aria-label="Giỏ hàng">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                </a>
+                <a id="userLink" href="orders.html" class="hover:text-red-600">Đơn của tôi</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main success content -->
+    <main id="successContainer" class="relative flex items-center justify-center px-6 py-20 md:py-32 min-h-[calc(100vh-65px)]">
+
+        <!-- Confetti dots overlay -->
+        <div id="confettiHost" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+        <div class="relative max-w-xl w-full text-center">
+            <!-- Animated check -->
+            <div class="check-wrap">
+                <svg class="checkmark" viewBox="0 0 52 52">
+                    <circle class="checkmark__circle" cx="26" cy="26" r="25"/>
+                    <path class="checkmark__check" d="M14 27 L22 35 L38 19"/>
+                </svg>
+            </div>
+
+            <div class="fade-1 text-xs uppercase tracking-[0.4em] text-gray-500 mt-10">Thành công</div>
+
+            <h1 class="fade-2 serif text-4xl md:text-5xl font-medium mt-4 leading-tight">
+                Đơn hàng đã được đặt
+            </h1>
+
+            <p class="fade-3 text-sm text-gray-600 mt-6 max-w-md mx-auto leading-relaxed">
+                Cảm ơn bạn đã tin tưởng <span class="font-bold tracking-wider">ADLV</span>.
+                Chúng tôi sẽ liên hệ xác nhận đơn hàng qua số điện thoại hoặc email trong vòng 24 giờ.
+            </p>
+
+            <div class="fade-4 mt-6 inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-5 py-2 text-xs">
+                <span class="text-gray-500 uppercase tracking-wider">Mã đơn:</span>
+                <code class="font-mono font-bold" id="orderCode">—</code>
+            </div>
+
+            <div class="fade-5 mt-12 flex flex-col sm:flex-row gap-3 justify-center">
+                <a href="category.html?type=all" class="border-2 border-black text-black px-8 py-4 uppercase text-xs font-bold tracking-widest hover:bg-black hover:text-white transition">
+                    Tiếp tục mua sắm
+                </a>
+                <a href="index.html" class="bg-black text-white px-8 py-4 uppercase text-xs font-bold tracking-widest hover:bg-red-600 transition">
+                    Trang chủ
+                </a>
+            </div>
+
+            <!-- Gift bear banner (nếu có) -->
+            <div id="giftBanner" class="fade-5 hidden mt-10 bg-gradient-to-br from-amber-100 via-orange-50 to-yellow-50 border-2 border-amber-300 rounded-2xl overflow-hidden shadow-xl">
+                <div class="flex items-center gap-5 p-5">
+                    <img id="giftImage" src="" alt="Gấu ADLV" class="w-24 h-24 object-cover rounded-lg flex-shrink-0 bg-white border border-amber-200"/>
+                    <div class="flex-1 text-left">
+                        <div class="text-[10px] uppercase tracking-[0.3em] text-amber-700 font-bold">🎁 Quà tặng kèm đơn</div>
+                        <h3 class="text-xl font-black uppercase mt-1" id="giftTitle">—</h3>
+                        <p class="text-xs text-gray-600 mt-1.5">Gấu plush ADLV cao 25cm sẽ được gửi kèm trong gói hàng của bạn.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reward / Loyalty tier banner -->
+            <div id="rewardBox" class="fade-5 hidden mt-10 relative overflow-hidden rounded-2xl text-left p-6 shadow-xl">
+                <!-- Gradient bg theo tier -->
+                <div id="rewardBg" class="absolute inset-0 -z-10"></div>
+                <!-- Sparkles -->
+                <div id="rewardSparkles" class="absolute inset-0 pointer-events-none -z-0"></div>
+
+                <div class="relative">
+                    <div class="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] mb-2 font-bold" id="rewardLabel">
+                        Phần thưởng
+                    </div>
+                    <div class="flex items-start gap-4">
+                        <div class="text-5xl" id="rewardEmoji">🎁</div>
+                        <div class="flex-1">
+                            <h3 class="text-2xl font-black uppercase" id="rewardTitle">—</h3>
+                            <p class="text-sm mt-1.5 opacity-90" id="rewardDesc">—</p>
+                            <div id="rewardCodeWrap" class="hidden mt-4">
+                                <div class="text-[10px] uppercase tracking-widest opacity-70 mb-1.5">Mã voucher</div>
+                                <div class="inline-flex items-center gap-2 bg-white/90 text-black px-4 py-2 rounded font-mono font-bold text-sm">
+                                    <span id="rewardCode">—</span>
+                                    <button onclick="copy(document.getElementById('rewardCode').textContent, this)" class="text-xs text-blue-600 hover:underline">Copy</button>
+                                </div>
+                            </div>
+                            <div id="rewardNote" class="text-[11px] mt-3 opacity-75">
+                                * Sẽ chính thức kích hoạt sau khi đơn hàng được giao thành công
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bank transfer info (chỉ hiện khi paymentMethod = BANK) -->
+            <div id="bankBox" class="fade-5 hidden mt-10 text-left bg-white border-2 border-amber-200 rounded-lg p-5 shadow-lg">
+                <div class="font-bold text-sm uppercase tracking-wider text-amber-900 mb-4">⚠️ Vui lòng chuyển khoản để hoàn tất đơn</div>
+                <div class="grid sm:grid-cols-[180px_1fr] gap-5 items-start">
+                    <!-- QR -->
+                    <div class="text-center">
+                        <div class="bg-white border border-gray-200 rounded p-2">
+                            <img id="bankQR" src="" alt="VietQR" class="w-full h-auto"/>
+                        </div>
+                        <div class="text-[11px] text-gray-500 mt-2">Quét bằng app ngân hàng</div>
+                    </div>
+                    <!-- Info -->
+                    <div class="space-y-2.5 text-sm">
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-gray-500">Ngân hàng</span>
+                            <span class="font-bold">MB Bank</span>
+                        </div>
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-gray-500">Số tài khoản</span>
+                            <span class="font-mono font-bold flex items-center gap-2">
+                                <span>0123456789</span>
+                                <button type="button" onclick="copy('0123456789', this)" class="text-xs text-blue-600 hover:underline">Copy</button>
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-gray-500">Chủ TK</span>
+                            <span class="font-bold">CONG TY ADLV STORE</span>
+                        </div>
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-gray-500">Số tiền</span>
+                            <span class="font-bold text-red-600" id="bankAmount">—</span>
+                        </div>
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-gray-500">Nội dung</span>
+                            <span class="font-mono text-xs font-bold flex items-center gap-2">
+                                <span id="bankContent">—</span>
+                                <button type="button" onclick="copy(document.getElementById('bankContent').textContent, this)" class="text-xs text-blue-600 hover:underline">Copy</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Optional order summary -->
+            <div id="orderSummary" class="fade-5 hidden mt-12 text-left bg-gray-50 rounded-lg p-6 border border-gray-100">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Tóm tắt</h3>
+                <div id="summaryItems" class="space-y-3 mb-4"></div>
+                <div class="border-t border-gray-200 pt-3 flex justify-between items-baseline">
+                    <span class="text-sm text-gray-600">Tổng thanh toán</span>
+                    <span id="summaryTotal" class="text-xl font-black">—</span>
+                </div>
+                <a href="orders.html" class="block mt-4 text-center text-sm text-gray-500 hover:text-black underline">Xem chi tiết đơn hàng</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast notifications giống reference -->
+    <div id="toastStack" class="fixed bottom-6 right-6 z-50 space-y-3 max-w-sm"></div>
+
+    <script>
+        const API_HOST = 'http://localhost:5083';
+        const API = API_HOST + '/api';
+
+        function fmt(n) { return Math.round(n).toLocaleString('vi-VN') + '₫'; }
+        function fullImageUrl(u) {
+            if (!u) return null;
+            if (u.startsWith('http')) return u;
+            if (u.startsWith('/')) return API_HOST + u;
+            return u;
+        }
+
+        function rewardFor(amount) {
+            if (amount >= 5000000) return {
+                tier: 5, emoji: '👑',
+                label: 'Phần thưởng VIP',
+                title: 'Tặng 1 sản phẩm bất kỳ',
+                desc: 'Đơn từ 5.000.000₫ được tặng voucher miễn phí 1 sản phẩm bất kỳ cho lần mua tiếp theo. Hệ thống sẽ tự miễn phí sản phẩm có giá cao nhất trong giỏ.',
+                code: 'ADLV-VIP-1FREE',
+                bgClass: 'bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600',
+                textColor: 'text-white'
+            };
+            if (amount >= 3000000) return {
+                tier: 4, emoji: '🎁',
+                label: 'Phần thưởng cao cấp',
+                title: 'Voucher giảm 400.000₫',
+                desc: 'Đơn từ 3.000.000₫ nhận voucher giảm 400.000₫ cho lần mua tiếp theo.',
+                code: 'ADLV-400K',
+                bgClass: 'bg-gradient-to-br from-fuchsia-500 via-pink-500 to-rose-600',
+                textColor: 'text-white'
+            };
+            if (amount >= 2000000) return {
+                tier: 3, emoji: '🎁',
+                label: 'Phần thưởng',
+                title: 'Voucher giảm 200.000₫',
+                desc: 'Đơn từ 2.000.000₫ nhận voucher giảm 200.000₫ cho lần mua tiếp theo.',
+                code: 'ADLV-200K',
+                bgClass: 'bg-gradient-to-br from-cyan-500 via-blue-600 to-indigo-700',
+                textColor: 'text-white'
+            };
+            if (amount >= 1000000) return {
+                tier: 2, emoji: '🚚',
+                label: 'Quyền lợi',
+                title: 'Miễn phí vận chuyển',
+                desc: 'Đơn hàng này đã được miễn phí vận chuyển. Cảm ơn bạn đã mua sắm cùng ADLV.',
+                code: null,
+                bgClass: 'bg-gradient-to-br from-emerald-500 to-green-700',
+                textColor: 'text-white'
+            };
+            return null;
+        }
+
+        function showReward(reward, orderCode) {
+            const box = document.getElementById('rewardBox');
+            box.classList.remove('hidden');
+            box.classList.add(...reward.bgClass.split(' '), reward.textColor);
+            document.getElementById('rewardLabel').textContent = reward.label;
+            document.getElementById('rewardEmoji').textContent = reward.emoji;
+            document.getElementById('rewardTitle').textContent = reward.title;
+            document.getElementById('rewardDesc').textContent = reward.desc;
+            if (reward.code) {
+                document.getElementById('rewardCodeWrap').classList.remove('hidden');
+                document.getElementById('rewardCode').textContent = `${reward.code}-${orderCode.slice(-6)}`;
+            } else {
+                document.getElementById('rewardNote').textContent = '✓ Đã áp dụng cho đơn hàng này';
+            }
+
+            // Sparkles động
+            const host = document.getElementById('rewardSparkles');
+            for (let i = 0; i < 12; i++) {
+                const s = document.createElement('div');
+                s.className = 'absolute';
+                s.style.cssText = `
+                    left:${Math.random()*100}%; top:${Math.random()*100}%;
+                    width:6px; height:6px; background:white; border-radius:50%;
+                    animation: sparkle 2.5s ${Math.random()*2}s infinite ease-in-out;
+                    opacity:0;
+                `;
+                host.appendChild(s);
+            }
+        }
+
+        function copy(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const original = btn.textContent;
+                btn.textContent = '✓ Đã copy';
+                btn.classList.add('text-emerald-600');
+                setTimeout(() => {
+                    btn.textContent = original;
+                    btn.classList.remove('text-emerald-600');
+                }, 1500);
+            });
+        }
+
+        const code = new URLSearchParams(window.location.search).get('code');
+        if (!code) {
+            // Không có order code → về trang chủ
+            window.location.href = 'index.html';
+        }
+        document.getElementById('orderCode').textContent = code || '—';
+
+        // Confetti dots
+        const COLORS = ['#111111', '#DC2626', '#F59E0B', '#10B981', '#3B82F6'];
+        const host = document.getElementById('confettiHost');
+        for (let i = 0; i < 30; i++) {
+            const d = document.createElement('div');
+            d.className = 'dot';
+            d.style.left = Math.random() * 100 + '%';
+            d.style.top = -20 + 'px';
+            d.style.background = COLORS[Math.floor(Math.random() * COLORS.length)];
+            d.style.animationDelay = (0.5 + Math.random() * 1.5) + 's';
+            d.style.animationDuration = (1.8 + Math.random() * 1.2) + 's';
+            host.appendChild(d);
+        }
+
+        // Toasts (giống reference: "Đặt hàng thành công" + items đã thêm)
+        function pushToast(title, subtitle) {
+            const el = document.createElement('div');
+            el.className = 'bg-white border border-gray-100 shadow-2xl rounded-lg p-4 transform translate-x-full opacity-0 transition-all duration-500';
+            el.innerHTML = `
+                <div class="font-bold text-sm">${title}</div>
+                <div class="text-xs text-gray-500 mt-0.5">${subtitle}</div>`;
+            document.getElementById('toastStack').appendChild(el);
+            setTimeout(() => {
+                el.style.transform = 'translateX(0)';
+                el.style.opacity = '1';
+            }, 50);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                setTimeout(() => el.remove(), 500);
+            }, 5000);
+        }
+
+        // Load order detail to show summary + toast
+        async function loadOrder() {
+            const token = localStorage.getItem('admin_token');
+            if (!token || !code) return;
+            try {
+                // Lấy danh sách đơn của user, tìm theo code
+                const res = await fetch(API + '/orders/my', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                const orders = await res.json();
+                const order = orders.find(o => o.orderCode === code);
+                if (!order) return;
+
+                // Toast 1: confirmation
+                setTimeout(() => pushToast(
+                    'Đặt hàng thành công!',
+                    'Chúng tôi sẽ liên hệ xác nhận sớm nhất.'
+                ), 1800);
+
+                // Toast 2: items
+                if (order.items && order.items.length) {
+                    setTimeout(() => {
+                        const itemNames = order.items.slice(0, 2).map(i =>
+                            `${i.productName} · ${i.size || '-'} ${i.color || ''}`).join('<br>');
+                        const more = order.items.length > 2 ? `<br>+ ${order.items.length - 2} sản phẩm khác` : '';
+                        pushToast('Đã thêm vào giỏ hàng', itemNames + more);
+                    }, 2600);
+                }
+
+                // Gift bear: tìm OrderItem có productId=null + name chứa "🎁 Gấu"
+                const giftItem = (order.items || []).find(i =>
+                    !i.productId && (i.productName || '').includes('🎁 Gấu'));
+                if (giftItem) {
+                    document.getElementById('giftBanner').classList.remove('hidden');
+                    document.getElementById('giftImage').src = fullImageUrl(giftItem.productImage) || 'assets/bear-male.png';
+                    document.getElementById('giftTitle').textContent = giftItem.productName.replace('🎁 ', '');
+                    setTimeout(() => pushToast('🎁 Đã thêm quà tặng', giftItem.productName), 4200);
+                }
+
+                // Tier reward (tính theo subtotal — không tính ship/discount đã áp dụng)
+                const eligibleAmount = order.subtotal;
+                const reward = rewardFor(eligibleAmount);
+                if (reward) {
+                    showReward(reward, order.orderCode);
+                    setTimeout(() => pushToast('🎁 Bạn nhận được phần thưởng!', reward.title), 3400);
+                }
+
+                // Bank transfer info (nếu thanh toán BANK)
+                if (order.paymentMethod === 'BANK') {
+                    const BANK_BIN  = '970422';
+                    const BANK_ACC  = '0123456789';
+                    const BANK_NAME = 'CONG TY ADLV STORE';
+                    const note = 'DH ' + order.orderCode;
+                    document.getElementById('bankBox').classList.remove('hidden');
+                    document.getElementById('bankAmount').textContent = fmt(order.total);
+                    document.getElementById('bankContent').textContent = note;
+                    document.getElementById('bankQR').src =
+                        `https://img.vietqr.io/image/${BANK_BIN}-${BANK_ACC}-compact2.jpg`
+                        + `?amount=${order.total}`
+                        + `&addInfo=${encodeURIComponent(note)}`
+                        + `&accountName=${encodeURIComponent(BANK_NAME)}`;
+                }
+
+                // Order summary panel
+                const summary = document.getElementById('orderSummary');
+                summary.classList.remove('hidden');
+                document.getElementById('summaryItems').innerHTML = order.items.map(it => {
+                    const img = fullImageUrl(it.productImage);
+                    return `
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 flex-shrink-0 bg-gray-100 overflow-hidden">
+                            ${img ? `<img src="${img}" class="w-full h-full object-cover"/>` : ''}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold line-clamp-1">${it.productName}</div>
+                            <div class="text-xs text-gray-500">${it.size || ''}${it.size && it.color ? ' · ' : ''}${it.color || ''} · SL: ${it.quantity}</div>
+                        </div>
+                        <div class="text-sm font-semibold">${fmt(it.subtotal)}</div>
+                    </div>`;
+                }).join('');
+                document.getElementById('summaryTotal').textContent = fmt(order.total);
+            } catch {}
+        }
+
+        loadOrder();
+    </script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lookbook 26SS — Baby Face Collection | ADLV Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #FAF9F6; color: #111; }
+        .serif { font-family: 'Playfair Display', serif; }
+        .article-num { font-family: 'Playfair Display', serif; font-weight: 700; }
+        .fade-up { animation: fadeUp 0.7s both; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .nav-link { position: relative; }
+        .nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: #111; transition: width 0.25s; }
+        .nav-link:hover::after { width: 100%; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100">
+        <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="index.html" class="block flex-shrink-0"><img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-10 w-auto"/></a>
+            <nav class="hidden md:flex items-center gap-7 text-[13px] font-semibold uppercase tracking-wide">
+                <a href="index.html" class="nav-link">Trang chủ</a>
+                <a href="category.html?type=ao" class="nav-link">Áo</a>
+                <a href="category.html?type=all" class="nav-link">Bộ sưu tập</a>
+            </nav>
+            <button onclick="Cart.openDrawer()" class="relative">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                <span class="cart-badge absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
+            </button>
+        </div>
+    </header>
+
+    <script src="assets/js/cart.js"></script>
+
+    <!-- HERO -->
+    <section class="max-w-[1400px] mx-auto px-6 pt-16 md:pt-24 pb-12 text-center fade-up">
+        <div class="text-[11px] uppercase tracking-[0.4em] text-red-600 font-bold mb-4">Lookbook · 26 SS</div>
+        <h1 class="serif text-5xl md:text-7xl font-medium leading-[0.95] mb-6">
+            Baby Face<br/><em class="text-gray-500">Collection</em>
+        </h1>
+        <p class="text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            Bộ sưu tập Xuân Hè 2026 lấy cảm hứng từ những điều giản dị nhất trong cuộc sống —
+            sự tối giản, niềm vui, và cảm giác chữa lành. Bốn thiết kế biểu tượng,
+            bốn câu chuyện khác nhau, cùng kể về một tinh thần ADLV trẻ trung mà tinh tế.
+        </p>
+        <div class="mt-8 text-[11px] uppercase tracking-widest text-gray-500">
+            <span>Bài viết bởi ADLV Editorial</span> · <span>Đọc 3 phút</span>
+        </div>
+    </section>
+
+    <!-- 4 ARTICLES — ảnh thiết kế gốc -->
+    <section class="max-w-[1400px] mx-auto px-6 py-12">
+        <a href="category.html?type=ao" class="block group">
+            <img src="assets/lookbook-26ss.png" alt="Lookbook 26SS — Baby Face Collection"
+                class="w-full h-auto rounded-sm shadow-sm group-hover:shadow-xl transition-shadow duration-500"/>
+            <p class="text-center text-xs italic text-gray-500 mt-4">— Editorial · ADLV 26SS Lookbook —</p>
+        </a>
+    </section>
+
+    <!-- CTA -->
+    <section class="max-w-3xl mx-auto px-6 py-20 text-center fade-up">
+        <div class="text-[11px] uppercase tracking-[0.4em] text-red-600 font-bold mb-4">Bộ sưu tập đầy đủ</div>
+        <h2 class="serif text-3xl md:text-5xl font-medium leading-tight mb-6">
+            Sở hữu trọn bộ <em>4 thiết kế</em>
+        </h2>
+        <p class="text-gray-600 mb-8">
+            Mỗi chiếc áo là một câu chuyện. Bốn câu chuyện hoà quyện thành một tinh thần.
+            Đặt mua trọn bộ và nhận voucher VIP cho lần mua tiếp theo.
+        </p>
+        <button onclick="buyAllFromLookbook(this)" class="bg-black text-white font-bold uppercase text-sm tracking-widest px-12 py-4 hover:bg-red-600 transition">
+            Mua trọn bộ — Thanh toán ngay
+        </button>
+        <a href="category.html?type=ao" class="block mt-4 text-sm text-gray-500 hover:text-black underline">Hoặc xem từng sản phẩm trong danh mục Áo</a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-black text-white mt-12">
+        <div class="max-w-[1400px] mx-auto px-6 py-12 grid md:grid-cols-3 gap-8 text-sm">
+            <div>
+                <div class="text-2xl font-black tracking-tighter mb-2">ADLV<span class="text-red-500">.</span></div>
+                <p class="text-gray-400">Câu chuyện thời trang được kể bằng từng đường kim mũi chỉ.</p>
+            </div>
+            <div></div>
+            <div class="text-right text-gray-500 text-xs">
+                © 2026 ADLV STORE Editorial.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const API_HOST = 'http://localhost:5083';
+        function fullImageUrl(u) {
+            if (!u) return null;
+            if (u.startsWith('http')) return u;
+            if (u.startsWith('/')) return API_HOST + u;
+            return u;
+        }
+
+        // Article keywords để map SP cho CTA "Mua trọn bộ" — chỉ giữ productKeyword
+        const ARTICLES = [
+            { productKeyword: 'Fuzzy Rabbit Đen' },
+            { productKeyword: 'Basic 2' },
+            { productKeyword: 'Fuzzy Rabbit Kem' },
+            { productKeyword: 'Teddy Bear' }
+        ];
+
+        async function buyAllFromLookbook(btn) {
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Đang xử lý...';
+            try {
+                const all = await (await fetch(API_HOST + '/api/products')).json();
+                const items = ARTICLES.map(a => {
+                    const p = all.find(x => x.name.toLowerCase().includes(a.productKeyword.toLowerCase()));
+                    if (!p) return null;
+                    const sizes = (p.sizes || '').split(',').map(s => s.trim()).filter(s => s);
+                    const colors = (p.colors || '').split(',').map(s => s.trim()).filter(s => s);
+                    return {
+                        productId: p.id,
+                        name: p.name,
+                        price: p.price,
+                        salePrice: p.salePrice,
+                        image: p.imageUrl,
+                        brand: p.brand,
+                        size: sizes.includes('M') ? 'M' : (sizes[0] || ''),
+                        color: colors[0] || '',
+                        quantity: 1
+                    };
+                }).filter(Boolean);
+
+                if (!items.length) {
+                    alert('Không tìm thấy SP. Hãy kiểm tra DB.');
+                    btn.disabled = false;
+                    btn.textContent = original;
+                    return;
+                }
+
+                items.forEach(it => Cart.add(it));
+                sessionStorage.setItem('checkout_items', JSON.stringify(items));
+                sessionStorage.setItem('checkout_voucher', '');
+                window.location.href = 'checkout.html';
+            } catch (err) {
+                alert('Lỗi: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = original;
+            }
+        }
+
+    </script>
+</body>
+</html>

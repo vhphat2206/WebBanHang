@@ -28,6 +28,13 @@
         .badge-new { background: #111; color: white; }
         .badge-best { background: #F59E0B; color: white; }
         .badge-sale { background: #DC2626; color: white; }
+        .orderFilter.active { background: #111; color: white; }
+        .order-status { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; }
+        .status-Pending    { background:#FEF3C7; color:#92400E; }
+        .status-Confirmed  { background:#DBEAFE; color:#1E40AF; }
+        .status-Shipping   { background:#E0E7FF; color:#3730A3; }
+        .status-Completed  { background:#D1FAE5; color:#065F46; }
+        .status-Cancelled  { background:#FEE2E2; color:#991B1B; }
     </style>
 </head>
 <body>
@@ -36,7 +43,7 @@
 <div id="loginScreen" class="min-h-screen flex items-center justify-center px-4">
     <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         <div class="text-center mb-8">
-            <div class="text-3xl font-black tracking-tighter">ADLV<span class="text-red-600">.</span></div>
+            <img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-12 w-auto mx-auto mb-2"/>
             <div class="text-xs text-gray-500 uppercase tracking-widest mt-1">Admin Panel</div>
         </div>
         <form id="loginForm" class="space-y-4">
@@ -66,7 +73,7 @@
         <!-- SIDEBAR -->
         <aside class="w-64 bg-white border-r border-gray-200 min-h-screen sticky top-0">
             <div class="p-6 border-b border-gray-100">
-                <div class="text-2xl font-black tracking-tighter">ADLV<span class="text-red-600">.</span></div>
+                <img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-8 w-auto"/>
                 <div class="text-[10px] text-gray-500 uppercase tracking-widest">Admin Panel</div>
             </div>
             <nav class="p-3 space-y-1">
@@ -77,6 +84,11 @@
                 <button class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-700" data-view="categories">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
                     Danh mục
+                </button>
+                <button class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-700" data-view="orders">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    <span class="flex-1 text-left">Đơn hàng</span>
+                    <span id="ordersPendingBadge" class="hidden bg-red-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span>
                 </button>
                 <a href="index.html" target="_blank" class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-700">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
@@ -126,6 +138,43 @@
                                 </tr>
                             </thead>
                             <tbody id="productTableBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ORDERS VIEW -->
+            <div id="ordersView" class="hidden">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 class="text-3xl font-black">Đơn hàng</h1>
+                        <p class="text-gray-500 text-sm mt-1" id="ordersCount">Đang tải...</p>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <button class="orderFilter active px-4 py-2 rounded-lg font-semibold" data-status="">Tất cả</button>
+                        <button class="orderFilter px-4 py-2 rounded-lg font-semibold text-gray-600 hover:bg-gray-100" data-status="Pending">Chờ xác nhận</button>
+                        <button class="orderFilter px-4 py-2 rounded-lg font-semibold text-gray-600 hover:bg-gray-100" data-status="Confirmed">Đã xác nhận</button>
+                        <button class="orderFilter px-4 py-2 rounded-lg font-semibold text-gray-600 hover:bg-gray-100" data-status="Shipping">Đang giao</button>
+                        <button class="orderFilter px-4 py-2 rounded-lg font-semibold text-gray-600 hover:bg-gray-100" data-status="Completed">Hoàn tất</button>
+                        <button class="orderFilter px-4 py-2 rounded-lg font-semibold text-gray-600 hover:bg-gray-100" data-status="Cancelled">Đã hủy</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr class="text-xs uppercase tracking-wider text-gray-500 font-bold">
+                                    <th class="text-left px-6 py-4">Mã đơn</th>
+                                    <th class="text-left px-6 py-4">Khách</th>
+                                    <th class="text-left px-6 py-4">SP</th>
+                                    <th class="text-right px-6 py-4">Tổng</th>
+                                    <th class="text-left px-6 py-4">Thanh toán</th>
+                                    <th class="text-left px-6 py-4">Ngày đặt</th>
+                                    <th class="text-left px-6 py-4">Trạng thái</th>
+                                    <th class="text-right px-6 py-4"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody" class="divide-y divide-gray-100"></tbody>
                         </table>
                     </div>
                 </div>
@@ -432,6 +481,7 @@
         document.getElementById('adminName').textContent = currentUser.fullName || currentUser.username;
         loadCategories();
         loadProducts();
+        loadOrdersPendingBadge();
     }
 
     // ===== NAVIGATION =====
@@ -442,7 +492,9 @@
             const view = btn.dataset.view;
             document.getElementById('productsView').classList.toggle('hidden', view !== 'products');
             document.getElementById('categoriesView').classList.toggle('hidden', view !== 'categories');
+            document.getElementById('ordersView').classList.toggle('hidden', view !== 'orders');
             if (view === 'categories') renderCategories();
+            if (view === 'orders') loadOrders();
         });
     });
 
@@ -477,6 +529,7 @@
             const thumb = imgUrl
                 ? `<img src="${imgUrl}" alt="${p.name}" class="w-12 h-12 rounded-lg object-cover" onerror="this.outerHTML='<div class=\\'w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center text-white font-black\\'>${initial}</div>'"/>`
                 : `<div class="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg flex items-center justify-center text-white font-black">${initial}</div>`;
+
             return `
             <tr class="hover:bg-gray-50 transition">
                 <td class="px-6 py-4">${thumb}</td>
@@ -496,7 +549,7 @@
                 <td class="px-6 py-4">
                     <div class="flex flex-wrap gap-1">${badges.join('') || '<span class="text-gray-300 text-xs">—</span>'}</div>
                 </td>
-                <td class="px-6 py-4 text-right">
+                <td class="px-6 py-4 text-right whitespace-nowrap">
                     <button onclick="editProduct(${p.id})" class="text-blue-600 hover:text-blue-800 text-sm font-semibold mr-3">Sửa</button>
                     <button onclick="deleteProduct(${p.id})" class="text-red-600 hover:text-red-800 text-sm font-semibold">Xóa</button>
                 </td>
@@ -558,7 +611,7 @@
 
     async function deleteProduct(id) {
         const p = products.find(x => x.id === id);
-        if (!confirm(`Xóa sản phẩm "${p.name}"?\n\nHành động này không thể hoàn tác.`)) return;
+        if (!confirm(`Xóa "${p.name}"?\n\nHành động này không thể hoàn tác.`)) return;
         try {
             await api(`/products/${id}`, { method: 'DELETE' });
             showToast('Đã xóa sản phẩm');
@@ -815,6 +868,141 @@
         } catch (err) {
             showToast(err.message, true);
         }
+    });
+
+    // ===== ORDERS =====
+    let orders = [];
+    let currentStatusFilter = '';
+
+    async function loadOrders() {
+        const tbody = document.getElementById('ordersTableBody');
+        tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-12 text-center"><div class="h-6 skeleton rounded"></div></td></tr>`;
+        try {
+            const path = currentStatusFilter ? `/orders?status=${currentStatusFilter}` : '/orders';
+            orders = await api(path);
+            renderOrders();
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+
+    async function loadOrdersPendingBadge() {
+        try {
+            const pending = await api('/orders?status=Pending');
+            const badge = document.getElementById('ordersPendingBadge');
+            if (pending.length > 0) {
+                badge.textContent = pending.length;
+                badge.classList.remove('hidden');
+                badge.classList.add('flex');
+            } else {
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
+            }
+        } catch {}
+    }
+
+    function statusLabel(s) {
+        return ({
+            'Pending': 'Chờ xác nhận', 'Confirmed': 'Đã xác nhận',
+            'Shipping': 'Đang giao', 'Completed': 'Hoàn tất', 'Cancelled': 'Đã hủy'
+        })[s] || s;
+    }
+
+    function renderOrders() {
+        document.getElementById('ordersCount').textContent = `${orders.length} đơn hàng`;
+        const tbody = document.getElementById('ordersTableBody');
+        if (!orders.length) {
+            tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-16 text-center text-gray-400">Không có đơn nào</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = orders.map(o => {
+            const d = new Date(o.createdAt);
+            const dateStr = d.toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+            const transitions = {
+                'Pending': ['Confirmed', 'Cancelled'],
+                'Confirmed': ['Shipping', 'Cancelled'],
+                'Shipping': ['Completed'],
+                'Completed': [],
+                'Cancelled': []
+            };
+            const nextStatuses = transitions[o.status] || [];
+            const actions = nextStatuses.length
+                ? nextStatuses.map(s => `<button onclick="changeStatus(${o.id}, '${s}')" class="text-xs font-semibold ${s === 'Cancelled' ? 'text-red-600 hover:bg-red-50' : 'text-blue-600 hover:bg-blue-50'} px-2 py-1 rounded">${statusLabel(s)}</button>`).join(' ')
+                : '<span class="text-xs text-gray-400">—</span>';
+
+            return `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-6 py-4">
+                    <div class="font-mono font-bold text-xs">${o.orderCode}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm font-semibold">${o.customerName}</div>
+                    <div class="text-xs text-gray-500">${o.phone}</div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">${(o.items || []).length} SP</td>
+                <td class="px-6 py-4 text-right">
+                    <div class="font-bold">${Math.round(o.total).toLocaleString('vi-VN')}₫</div>
+                    ${o.voucherCode ? `<div class="text-[10px] text-emerald-600 font-semibold">${o.voucherCode}</div>` : ''}
+                </td>
+                <td class="px-6 py-4 text-xs">
+                    <span class="bg-gray-100 px-2 py-1 rounded">${o.paymentMethod}</span>
+                </td>
+                <td class="px-6 py-4 text-xs text-gray-600">${dateStr}</td>
+                <td class="px-6 py-4">
+                    <span class="order-status status-${o.status}">${statusLabel(o.status)}</span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                    <button onclick="viewOrder(${o.id})" class="text-blue-600 hover:text-blue-800 text-sm font-semibold mr-2">Xem</button>
+                    ${actions}
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function changeStatus(id, status) {
+        if (status === 'Cancelled' && !confirm('Hủy đơn này? Stock sẽ được hoàn lại.')) return;
+        try {
+            await api(`/orders/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+            showToast(`Đã chuyển sang: ${statusLabel(status)}`);
+            loadOrders();
+            loadOrdersPendingBadge();
+            loadProducts(); // refresh stock display
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+
+    function viewOrder(id) {
+        const o = orders.find(x => x.id === id);
+        if (!o) return;
+        const itemsText = (o.items || []).map(i =>
+            `  • ${i.productName} (${i.size || '-'}/${i.color || '-'}) × ${i.quantity} = ${i.subtotal.toLocaleString('vi-VN')}₫`
+        ).join('\n');
+        alert(
+            `ĐƠN HÀNG ${o.orderCode}\n` +
+            `Trạng thái: ${statusLabel(o.status)}\n\n` +
+            `KHÁCH HÀNG\n${o.customerName}\n${o.phone}\n${o.email || '-'}\n${o.shippingAddress}\n\n` +
+            `SẢN PHẨM\n${itemsText}\n\n` +
+            `Tạm tính: ${o.subtotal.toLocaleString('vi-VN')}₫\n` +
+            `Ship: ${o.shippingFee.toLocaleString('vi-VN')}₫\n` +
+            `${o.voucherCode ? `Voucher ${o.voucherCode}: −${o.discountAmount.toLocaleString('vi-VN')}₫\n` : ''}` +
+            `Tổng: ${o.total.toLocaleString('vi-VN')}₫\n\n` +
+            `Thanh toán: ${o.paymentMethod}\n` +
+            (o.notes ? `Ghi chú: ${o.notes}` : '')
+        );
+    }
+
+    document.querySelectorAll('.orderFilter').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.orderFilter').forEach(b => {
+                b.classList.remove('active');
+                b.classList.add('text-gray-600', 'hover:bg-gray-100');
+            });
+            btn.classList.add('active');
+            btn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+            currentStatusFilter = btn.dataset.status;
+            loadOrders();
+        });
     });
 
     // ===== STARTUP =====

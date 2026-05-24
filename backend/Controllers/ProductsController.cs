@@ -17,10 +17,33 @@ namespace backend.Controllers
             _context = context;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
+        // ADLV CDN dùng path /resize/{WxH}/ — tự nâng thumbnail size lên 914x1200
+        // để ảnh hiển thị nét trên trang chi tiết.
+        private static string UpscaleAdlvUrl(string url)
         {
-            return Ok(await _context.Products.Include(p => p.Category).ToListAsync());
+            if (string.IsNullOrWhiteSpace(url)) return url;
+            if (!url.Contains("dytbw3ui6vsu6.cloudfront.net")) return url;
+            foreach (var small in new[] { "/resize/100x100/", "/resize/200x200/", "/resize/360x480/", "/resize/750x750/" })
+            {
+                if (url.Contains(small))
+                    url = url.Replace(small, "/resize/914x1200/");
+            }
+            return url;
+        }
+
+        private static string UpscaleAdlvUrls(string urls)
+        {
+            if (string.IsNullOrWhiteSpace(urls)) return urls;
+            var parts = urls.Split(',', StringSplitOptions.RemoveEmptyEntries);
+            return string.Join(",", parts.Select(u => UpscaleAdlvUrl(u.Trim())));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
+        {
+            var query = _context.Products.Include(p => p.Category).AsQueryable();
+            if (!includeDeleted) query = query.Where(p => !p.IsDeleted);
+            return Ok(await query.ToListAsync());
         }
 
         [HttpGet("{id}")]
@@ -36,14 +59,15 @@ namespace backend.Controllers
         [HttpGet("search")]
         public async Task<ActionResult<IEnumerable<Product>>> SearchProducts([FromQuery] string? query)
         {
+            var result = _context.Products
+                .Include(p => p.Category)
+                .Where(p => !p.IsDeleted)
+                .AsQueryable();
+
             if (string.IsNullOrWhiteSpace(query))
-            {
-                return await _context.Products.Include(p => p.Category).ToListAsync();
-            }
+                return Ok(await result.ToListAsync());
 
             var keywords = query.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var result = _context.Products.Include(p => p.Category).AsQueryable();
-
             foreach (var keyword in keywords)
             {
                 result = result.Where(p =>
@@ -61,6 +85,8 @@ namespace backend.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] Product product)
         {
+            product.ImageUrl = UpscaleAdlvUrl(product.ImageUrl);
+            product.ImageUrls = UpscaleAdlvUrls(product.ImageUrls);
             product.CreatedAt = DateTime.UtcNow;
             product.UpdatedAt = DateTime.UtcNow;
             _context.Products.Add(product);
@@ -84,8 +110,8 @@ namespace backend.Controllers
             product.Price = input.Price;
             product.SalePrice = input.SalePrice;
             product.Description = input.Description;
-            product.ImageUrl = input.ImageUrl;
-            product.ImageUrls = input.ImageUrls;
+            product.ImageUrl = UpscaleAdlvUrl(input.ImageUrl);
+            product.ImageUrls = UpscaleAdlvUrls(input.ImageUrls);
             product.Brand = input.Brand;
             product.Material = input.Material;
             product.Fit = input.Fit;
@@ -113,9 +139,24 @@ namespace backend.Controllers
         {
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound();
+
+            // Xóa hẳn — OrderItem có snapshot tên/giá/ảnh nên đơn hàng cũ vẫn hiển thị đúng,
+            // ProductId trong OrderItem sẽ tự set NULL (FK SetNull)
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
-            return NoContent();
+            return Ok(new { message = "Đã xóa sản phẩm" });
+        }
+
+        [HttpPut("{id}/restore")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+            product.IsDeleted = false;
+            product.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Đã hiện lại sản phẩm" });
         }
     }
 }

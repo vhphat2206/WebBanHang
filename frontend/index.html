@@ -17,14 +17,65 @@
         .product-card:hover .add-btn { opacity: 1; transform: translateY(0); }
         .product-image { background: linear-gradient(135deg, var(--c1), var(--c2)); }
         .marquee-track {
-            display: flex; gap: 3rem;
-            animation: marquee 25s linear infinite;
+            display: inline-flex;
+            gap: 0;
+            animation: marquee 40s linear infinite;
             white-space: nowrap;
+            will-change: transform;
+        }
+        .promo-bar:hover .marquee-track { animation-play-state: paused; }
+        .marquee-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 2.5rem;
+            position: relative;
+        }
+        .marquee-item:not(:last-child)::after {
+            content: '◆';
+            position: absolute;
+            right: -0.4rem;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.35;
+            font-size: 8px;
         }
         @keyframes marquee {
-            0% { transform: translateX(0); }
+            0%   { transform: translateX(0); }
             100% { transform: translateX(-50%); }
         }
+        @keyframes promoIn {
+            from { opacity: 0; transform: scale(0.92) translateY(20px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-promoIn { animation: promoIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Hero carousel slides — đồng bộ chiều cao 2 slide */
+        #heroCarousel { min-height: 880px; }
+        .hero-slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 1.2s ease;
+            pointer-events: none;
+        }
+        .hero-slide.active {
+            opacity: 1;
+            pointer-events: auto;
+            position: relative;
+        }
+        @media (max-width: 768px) {
+            #heroCarousel { min-height: 480px; }
+        }
+        .hero-dot {
+            width: 32px; height: 4px;
+            background: rgba(255,255,255,0.35);
+            border-radius: 2px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .hero-dot.active { background: #fff; width: 56px; }
+        .hero-dot:hover:not(.active) { background: rgba(255,255,255,0.6); }
         .hero-slide { transition: opacity 0.7s ease; }
         .tab-btn.active { border-bottom: 2px solid #111; color: #111; }
         .tab-btn { border-bottom: 2px solid transparent; }
@@ -46,21 +97,14 @@
 <body class="min-h-screen">
 
     <!-- TOP PROMO BAR (Marquee) -->
-    <div class="bg-[#FFE600] text-black text-xs font-semibold py-2.5 overflow-hidden">
-        <div class="marquee-track">
-            <span>🎁 GIẢM 10% CHO ĐƠN HÀNG ĐẦU TIÊN — MÃ: NEWTOADLV</span>
-            <span>🚚 MIỄN PHÍ VẬN CHUYỂN ĐƠN TỪ 500.000₫</span>
-            <span>♻️ ĐỔI TRẢ MIỄN PHÍ TRONG 7 NGÀY</span>
-            <span>🎁 GIẢM 10% CHO ĐƠN HÀNG ĐẦU TIÊN — MÃ: NEWTOADLV</span>
-            <span>🚚 MIỄN PHÍ VẬN CHUYỂN ĐƠN TỪ 500.000₫</span>
-            <span>♻️ ĐỔI TRẢ MIỄN PHÍ TRONG 7 NGÀY</span>
-        </div>
+    <div class="promo-bar bg-[#FFE600] text-black text-xs font-semibold py-2.5 overflow-hidden">
+        <div class="marquee-track" id="promoTrack"></div>
     </div>
 
     <!-- HEADER -->
     <header class="sticky top-0 z-50 bg-white border-b border-gray-100">
         <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
-            <a href="#" class="text-2xl font-black tracking-tighter">ADLV<span class="text-red-600">.</span></a>
+            <a href="index.html" class="block flex-shrink-0"><img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-10 w-auto"/></a>
 
             <nav class="hidden lg:flex items-center gap-7 text-[13px] font-semibold uppercase tracking-wide">
                 <a href="category.html?type=sale" class="nav-link text-red-600">END OF SEASON SALE</a>
@@ -78,48 +122,159 @@
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 </button>
 
-                <!-- Account: hiển thị 1 trong 2 trạng thái -->
-                <a id="dashboardLink" href="admin.html" class="hidden items-center gap-1.5 bg-black text-white text-xs font-bold uppercase px-3 py-2 rounded-full hover:bg-red-600 transition" title="Mở Admin Dashboard">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
-                    Dashboard
-                </a>
-                <button id="loginBtn" onclick="openLoginModal()" aria-label="Đăng nhập" title="Đăng nhập">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                <!-- Notifications bell (chỉ hiện khi đã login) -->
+                <button id="notifBtn" onclick="Notifications.openDropdown()" class="hidden relative" aria-label="Thông báo">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span class="notif-badge absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
                 </button>
 
-                <button class="relative" aria-label="Giỏ hàng">
+                <!-- ACCOUNT AREA: 2 trạng thái -->
+                <!-- Guest: hiển thị Đăng nhập | Đăng ký -->
+                <div id="guestActions" class="hidden md:flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wide">
+                    <button onclick="openLoginModal()" class="hover:text-red-600 transition">Đăng nhập</button>
+                    <span class="text-gray-300">|</span>
+                    <button onclick="openRegisterModal()" class="hover:text-red-600 transition">Đăng ký</button>
+                </div>
+
+                <!-- Logged in: hiển thị tên user + dropdown -->
+                <div id="userActions" class="hidden relative">
+                    <button onclick="toggleUserMenu()" class="flex items-center gap-2 text-[13px] font-semibold hover:text-red-600 transition">
+                        <div class="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center text-xs font-black" id="userAvatar">U</div>
+                        <span class="hidden sm:inline" id="userDisplayName">User</span>
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div id="userDropdown" class="hidden absolute right-0 top-full mt-3 w-56 bg-white border border-gray-100 rounded-lg shadow-xl py-2 z-50">
+                        <div class="px-4 py-3 border-b border-gray-100">
+                            <div class="font-semibold text-sm" id="dropdownName">Tên user</div>
+                            <div class="text-xs text-gray-500" id="dropdownEmail">email@example.com</div>
+                            <div class="mt-2 inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded" id="dropdownRoleBadge">Customer</div>
+                        </div>
+                        <a id="adminMenuLink" href="admin.html" class="hidden items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 font-semibold">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+                            Admin Dashboard
+                        </a>
+                        <a href="account.html" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                            Tài khoản của tôi
+                        </a>
+                        <a href="orders.html" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            Đơn hàng của tôi
+                        </a>
+                        <a href="wishlist.html" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/></svg>
+                            Yêu thích
+                        </a>
+                        <div class="border-t border-gray-100 mt-1"></div>
+                        <button onclick="logout()" class="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 font-semibold">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                            Đăng xuất
+                        </button>
+                    </div>
+                </div>
+
+                <button class="relative" aria-label="Giỏ hàng" onclick="Cart.openDrawer()">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                    <span class="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                    <span class="cart-badge absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
                 </button>
             </div>
         </div>
     </header>
 
+    <script src="assets/js/cart.js"></script>
+
+    <!-- PROMO POPUP — Mua 2 áo tặng 1 gấu -->
+    <div id="promoModal" class="hidden fixed inset-0 z-[200] backdrop-blur-md bg-black/75 flex items-center justify-center px-4 py-8 overflow-y-auto" onclick="if(event.target.id==='promoModal') dismissPromo()">
+        <div class="relative max-w-[420px] w-full animate-promoIn">
+            <button onclick="dismissPromo()" aria-label="Đóng"
+                class="absolute -top-12 right-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl shadow-xl hover:bg-red-600 hover:text-white transition">×</button>
+            <img src="assets/promo-bear-poster.png" alt="Mua 2 áo tặng 1 gấu" class="w-full rounded-2xl shadow-2xl"/>
+            <div class="mt-4 flex flex-col gap-2">
+                <a href="category.html?type=ao" class="block bg-white text-black text-center py-3.5 font-black uppercase tracking-wider text-sm rounded-lg hover:bg-red-600 hover:text-white transition">
+                    Mua ngay — Nhận gấu ADLV
+                </a>
+                <label class="flex items-center justify-center gap-2 cursor-pointer text-xs text-white/70">
+                    <input type="checkbox" id="promoSkip24h" class="accent-white"/>
+                    Không hiện lại trong 24 giờ
+                </label>
+            </div>
+        </div>
+    </div>
+
     <!-- LOGIN MODAL -->
     <div id="loginModal" class="hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4" onclick="if(event.target.id==='loginModal') this.classList.add('hidden')">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
             <div class="text-center mb-6">
-                <div class="text-2xl font-black tracking-tighter">ADLV<span class="text-red-600">.</span></div>
+                <img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-10 w-auto mx-auto mb-2"/>
                 <div class="text-xs text-gray-500 uppercase tracking-widest mt-1">Đăng nhập tài khoản</div>
             </div>
             <form id="loginFormHome" class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Tài khoản</label>
-                    <input type="text" id="loginHomeUser" required class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none"/>
+                    <input type="text" id="loginHomeUser" required autocomplete="username" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none"/>
                 </div>
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mật khẩu</label>
-                    <input type="password" id="loginHomePass" required class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none"/>
+                    <input type="password" id="loginHomePass" required autocomplete="current-password" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none"/>
                 </div>
                 <div id="loginHomeError" class="text-sm text-red-600 hidden"></div>
                 <button type="submit" class="w-full bg-black text-white font-bold uppercase py-3 rounded-lg hover:bg-red-600 transition">Đăng nhập</button>
             </form>
+            <div class="text-center mt-5 text-sm text-gray-500">
+                Chưa có tài khoản?
+                <button onclick="switchToRegister()" class="text-black font-semibold hover:text-red-600 underline">Đăng ký ngay</button>
+            </div>
             <div class="mt-5 pt-5 border-t border-gray-100 text-xs text-gray-400 text-center">
                 <div class="font-semibold mb-1">Tài khoản admin demo:</div>
                 <div><code class="bg-gray-100 px-1.5 py-0.5 rounded">admin</code> / <code class="bg-gray-100 px-1.5 py-0.5 rounded">admin123</code></div>
             </div>
         </div>
     </div>
+
+    <!-- REGISTER MODAL -->
+    <div id="registerModal" class="hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center px-4 overflow-y-auto py-10" onclick="if(event.target.id==='registerModal') this.classList.add('hidden')">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+            <div class="text-center mb-6">
+                <img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-10 w-auto mx-auto mb-2"/>
+                <div class="text-xs text-gray-500 uppercase tracking-widest mt-1">Tạo tài khoản mới</div>
+            </div>
+            <form id="registerForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Họ và tên *</label>
+                    <input type="text" id="regFullName" required class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none" placeholder="Nguyễn Văn A"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Tài khoản *</label>
+                    <input type="text" id="regUsername" required minlength="3" maxlength="50" autocomplete="username" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none" placeholder="username (3-50 ký tự)"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Email</label>
+                    <input type="email" id="regEmail" autocomplete="email" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none" placeholder="email@example.com"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mật khẩu *</label>
+                    <input type="password" id="regPassword" required minlength="6" autocomplete="new-password" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none" placeholder="Tối thiểu 6 ký tự"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Xác nhận mật khẩu *</label>
+                    <input type="password" id="regPasswordConfirm" required minlength="6" autocomplete="new-password" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none" placeholder="Nhập lại mật khẩu"/>
+                </div>
+                <div id="registerError" class="text-sm text-red-600 hidden"></div>
+                <label class="flex items-start gap-2 cursor-pointer text-xs text-gray-600">
+                    <input type="checkbox" required class="mt-0.5 accent-black"/>
+                    <span>Tôi đồng ý với <a href="#" class="underline">Điều khoản sử dụng</a> và <a href="#" class="underline">Chính sách bảo mật</a></span>
+                </label>
+                <button type="submit" class="w-full bg-black text-white font-bold uppercase py-3 rounded-lg hover:bg-red-600 transition">Đăng ký</button>
+            </form>
+            <div class="text-center mt-5 text-sm text-gray-500">
+                Đã có tài khoản?
+                <button onclick="switchToLogin()" class="text-black font-semibold hover:text-red-600 underline">Đăng nhập</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 z-[200] bg-black text-white px-6 py-4 rounded-lg shadow-2xl font-semibold"></div>
 
     <!-- SEARCH MODAL -->
     <div id="searchModal" class="hidden fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm" onclick="if(event.target.id==='searchModal') this.classList.add('hidden')">
@@ -142,58 +297,120 @@
         </div>
     </div>
 
-    <!-- HERO BANNER -->
-    <section class="relative bg-gradient-to-br from-gray-900 to-black text-white overflow-hidden">
-        <div class="max-w-[1400px] mx-auto px-6 py-20 md:py-32 grid md:grid-cols-2 gap-10 items-center">
-            <div>
-                <div class="text-xs font-bold uppercase tracking-[0.3em] text-red-500 mb-4">26 SS Collection</div>
-                <h1 class="text-5xl md:text-7xl font-black uppercase leading-[0.95] tracking-tight mb-6">
-                    Silent<br/>Core<br/><span class="text-red-500">Drop</span>
-                </h1>
-                <p class="text-gray-300 max-w-md mb-8">Bộ sưu tập Xuân Hè 2026 — định nghĩa lại phong cách đường phố với những thiết kế tối giản nhưng đầy chất riêng.</p>
-                <div class="flex gap-3">
-                    <button class="bg-white text-black font-bold uppercase text-sm px-8 py-4 hover:bg-red-500 hover:text-white transition">Mua ngay</button>
-                    <button class="border border-white text-white font-bold uppercase text-sm px-8 py-4 hover:bg-white hover:text-black transition">Xem Lookbook</button>
+    <!-- HERO BANNER CAROUSEL -->
+    <section class="relative bg-gradient-to-br from-gray-900 to-black text-white overflow-hidden" id="heroCarousel">
+        <!-- Slide 1: Silent Core Drop -->
+        <div class="hero-slide active">
+            <div class="max-w-[1400px] mx-auto px-6 py-20 md:py-32 grid md:grid-cols-2 gap-10 items-center">
+                <div>
+                    <div class="text-xs font-bold uppercase tracking-[0.3em] text-red-500 mb-4">26 SS Collection</div>
+                    <h1 class="text-5xl md:text-7xl font-black uppercase leading-[0.95] tracking-tight mb-6">
+                        Silent<br/>Core<br/><span class="text-red-500">Drop</span>
+                    </h1>
+                    <p class="text-gray-300 max-w-md mb-8">Bộ sưu tập Xuân Hè 2026 — định nghĩa lại phong cách đường phố với những thiết kế tối giản nhưng đầy chất riêng.</p>
+                    <div class="flex gap-3">
+                        <button id="buyLookbookBtn" onclick="buyLookbookSet(this)" class="bg-white text-black font-bold uppercase text-sm px-8 py-4 hover:bg-red-500 hover:text-white transition">Mua ngay</button>
+                    </div>
                 </div>
-            </div>
-            <div class="hidden md:block relative h-[560px]">
-                <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-orange-500 rounded-3xl rotate-2 opacity-40 blur-2xl"></div>
-                <div class="absolute inset-0 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-3xl -rotate-2 opacity-40 blur-2xl"></div>
-                <div class="relative h-full rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-                    <img src="assets/hero-models.png" alt="ADLV Collection 26SS" class="w-full h-full object-cover" />
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                    <div class="absolute bottom-6 left-6 right-6 flex items-end justify-between">
-                        <div>
-                            <div class="text-[10px] uppercase tracking-[0.3em] text-white/70 mb-1">Featured Lookbook</div>
-                            <div class="text-xl font-black text-white">26 SS · Baby Face Collection</div>
+                <div class="hidden md:block relative h-[560px]">
+                    <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-orange-500 rounded-3xl rotate-2 opacity-40 blur-2xl"></div>
+                    <div class="absolute inset-0 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-3xl -rotate-2 opacity-40 blur-2xl"></div>
+                    <div class="relative h-full rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                        <img src="assets/hero-models.png" alt="ADLV Collection 26SS" class="w-full h-full object-cover" />
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                        <div class="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-[0.3em] text-white/70 mb-1">Featured Lookbook</div>
+                                <div class="text-xl font-black text-white">26 SS · Baby Face Collection</div>
+                            </div>
+                            <a href="lookbook.html" class="bg-white text-black w-12 h-12 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition" aria-label="Xem bài viết">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                            </a>
                         </div>
-                        <button class="bg-white text-black w-12 h-12 rounded-full flex items-center justify-center hover:bg-red-500 hover:text-white transition" aria-label="Xem chi tiết">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-                        </button>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Slide 2: Mua 2 áo tặng 1 gấu — container đồng bộ với slide 1, ảnh full không crop -->
+        <div class="hero-slide">
+            <div class="max-w-[1400px] mx-auto px-6 py-12 md:py-16">
+                <a href="category.html?type=ao" class="block relative aspect-[1704/923] rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10 group" aria-label="Mua ngay — Mua 2 áo tặng 1 gấu">
+                    <!-- Halo gradient nhẹ phía sau giống slide 1 -->
+                    <div class="absolute -inset-6 bg-gradient-to-br from-amber-500 to-orange-500 rounded-3xl rotate-2 opacity-30 blur-2xl -z-10"></div>
+                    <div class="absolute -inset-6 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-3xl -rotate-2 opacity-30 blur-2xl -z-10"></div>
+
+                    <!-- Ảnh full không crop, fit theo aspect ratio gốc 1704:923 -->
+                    <img src="assets/hero-bear-promo.png" alt="Mua 2 áo tặng 1 gấu ADLV" class="absolute inset-0 w-full h-full object-cover transition duration-700 group-hover:scale-[1.02]"/>
+                </a>
+            </div>
+        </div>
+
+        <!-- Dots indicator -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-10">
+            <button class="hero-dot active" data-slide="0" aria-label="Slide 1"></button>
+            <button class="hero-dot" data-slide="1" aria-label="Slide 2"></button>
+        </div>
+
+        <!-- Arrow controls -->
+        <button onclick="heroPrev()" class="hero-arrow absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/25 rounded-full flex items-center justify-center backdrop-blur z-10 transition" aria-label="Prev">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <button onclick="heroNext()" class="hero-arrow absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 bg-white/10 hover:bg-white/25 rounded-full flex items-center justify-center backdrop-blur z-10 transition" aria-label="Next">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        </button>
     </section>
 
-    <!-- COLLECTION HIGHLIGHT (4 banners) -->
+    <!-- COLLECTION POSTERS (4 banners) -->
     <section class="max-w-[1400px] mx-auto px-6 py-16">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="aspect-[3/4] bg-gradient-to-br from-red-500 to-orange-500 rounded-lg p-6 text-white flex flex-col justify-end hover:scale-[1.02] transition cursor-pointer">
-                <div class="text-xs uppercase tracking-widest opacity-80">New Drop</div>
-                <div class="font-black text-2xl uppercase">ADLV x Jordan</div>
+        <div class="mb-8">
+            <div class="text-xs uppercase tracking-[0.3em] text-red-600 font-bold mb-2">Featured Collections</div>
+            <h2 class="text-3xl md:text-4xl font-black uppercase tracking-tight">Bộ sưu tập nổi bật</h2>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Poster 1: NEW DROP — Bear Hoodie -->
+            <div class="relative aspect-[3/4] overflow-hidden rounded-lg bg-gray-900">
+                <img src="assets/poster-new-drop.webp" alt="ADLV Bear Hoodie New Drop" class="absolute inset-0 w-full h-full object-cover"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
+                <span class="absolute top-4 left-4 bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1">New Drop</span>
+                <div class="absolute bottom-0 left-0 right-0 p-5 text-white">
+                    <div class="text-[10px] uppercase tracking-[0.25em] opacity-80 mb-1">Streetwear</div>
+                    <h3 class="font-black text-xl md:text-2xl uppercase leading-tight">Bear Hoodie</h3>
+                </div>
             </div>
-            <div class="aspect-[3/4] bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg p-6 text-white flex flex-col justify-end hover:scale-[1.02] transition cursor-pointer">
-                <div class="text-xs uppercase tracking-widest opacity-80">Bestseller</div>
-                <div class="font-black text-2xl uppercase">Basic Logo</div>
+
+            <!-- Poster 2: BESTSELLER — Basic Logo -->
+            <div class="relative aspect-[3/4] overflow-hidden rounded-lg bg-gray-100">
+                <img src="assets/poster-basic-logo.jpg" alt="ADLV Basic Logo Bestseller" class="absolute inset-0 w-full h-full object-cover"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                <span class="absolute top-4 left-4 bg-white text-black text-[10px] font-black uppercase tracking-widest px-2.5 py-1">Bestseller</span>
+                <div class="absolute bottom-0 left-0 right-0 p-5 text-white">
+                    <div class="text-[10px] uppercase tracking-[0.25em] opacity-80 mb-1">Tinh giản</div>
+                    <h3 class="font-black text-xl md:text-2xl uppercase leading-tight">Basic Logo</h3>
+                </div>
             </div>
-            <div class="aspect-[3/4] bg-gradient-to-br from-fuchsia-500 to-purple-600 rounded-lg p-6 text-white flex flex-col justify-end hover:scale-[1.02] transition cursor-pointer">
-                <div class="text-xs uppercase tracking-widest opacity-80">Limited</div>
-                <div class="font-black text-2xl uppercase">Baby Face</div>
+
+            <!-- Poster 3: LIMITED — Pixel Bear -->
+            <div class="relative aspect-[3/4] overflow-hidden rounded-lg bg-gray-100">
+                <img src="assets/poster-baby-face.webp" alt="ADLV Pixel Bear Limited" class="absolute inset-0 w-full h-full object-cover"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
+                <span class="absolute top-4 left-4 bg-amber-500 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1">Limited</span>
+                <div class="absolute bottom-0 left-0 right-0 p-5 text-white">
+                    <div class="text-[10px] uppercase tracking-[0.25em] opacity-80 mb-1">Pixel art series</div>
+                    <h3 class="font-black text-xl md:text-2xl uppercase leading-tight">Pixel Bear</h3>
+                </div>
             </div>
-            <div class="aspect-[3/4] bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg p-6 text-white flex flex-col justify-end hover:scale-[1.02] transition cursor-pointer">
-                <div class="text-xs uppercase tracking-widest opacity-80">Kids Open</div>
-                <div class="font-black text-2xl uppercase">ADLV Kids</div>
+
+            <!-- Poster 4: EXCLUSIVE — Peak State -->
+            <div class="relative aspect-[3/4] overflow-hidden rounded-lg bg-gray-100">
+                <img src="assets/poster-peak-state.jpg" alt="ADLV Peak State Exclusive" class="absolute inset-0 w-full h-full object-cover"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent"></div>
+                <span class="absolute top-4 left-4 bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1">Exclusive</span>
+                <div class="absolute bottom-0 left-0 right-0 p-5 text-white">
+                    <div class="text-[10px] uppercase tracking-[0.25em] opacity-80 mb-1">Graphic series</div>
+                    <h3 class="font-black text-xl md:text-2xl uppercase leading-tight">Peak State</h3>
+                </div>
             </div>
         </div>
     </section>
@@ -296,6 +513,80 @@
         ];
 
         const API_HOST = 'http://localhost:5083';
+
+        // Buy the 4 lookbook shirts cùng lúc + redirect checkout
+        async function buyLookbookSet(btn) {
+            const original = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Đang xử lý...';
+            try {
+                // Tìm 4 SP theo tên (chứa keyword), bền hơn hardcode id
+                const all = await (await fetch(API_HOST + '/api/products')).json();
+                const wanted = [
+                    'Teddy Bear',          // Bear Logo Đen
+                    'Basic 2',             // Typography Trắng
+                    'Fuzzy Rabbit Đen',    // Bunny Đen
+                    'Fuzzy Rabbit Kem'     // Fluffy Bunny Kem
+                ];
+                const selected = wanted
+                    .map(kw => all.find(p => p.name.toLowerCase().includes(kw.toLowerCase())))
+                    .filter(Boolean);
+
+                if (!selected.length) {
+                    alert('Không tìm thấy SP lookbook. Hãy kiểm tra DB.');
+                    return;
+                }
+
+                const items = selected.map(p => {
+                    const sizes = (p.sizes || '').split(',').map(s => s.trim()).filter(s => s);
+                    const colors = (p.colors || '').split(',').map(s => s.trim()).filter(s => s);
+                    return {
+                        productId: p.id,
+                        name: p.name,
+                        price: p.price,
+                        salePrice: p.salePrice,
+                        image: p.imageUrl,
+                        brand: p.brand,
+                        size: sizes.includes('M') ? 'M' : (sizes[0] || ''),
+                        color: colors[0] || '',
+                        quantity: 1
+                    };
+                });
+
+                items.forEach(it => Cart.add(it));
+                sessionStorage.setItem('checkout_items', JSON.stringify(items));
+                sessionStorage.setItem('checkout_voucher', '');
+                window.location.href = 'checkout.html';
+            } catch (err) {
+                alert('Lỗi: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = original;
+            }
+        }
+
+        function quickAddToCart(productId) {
+            const p = allProducts.find(x => x.id === productId);
+            if (!p) return;
+            const sizes = (p.sizes || '').split(',').map(s => s.trim()).filter(s => s);
+            const colors = (p.colors || '').split(',').map(s => s.trim()).filter(s => s);
+            if (sizes.length || colors.length) {
+                // Yêu cầu chọn size/màu → đưa sang trang chi tiết
+                window.location.href = `product.html?id=${productId}`;
+                return;
+            }
+            Cart.add({
+                productId: p.id,
+                name: p.name,
+                price: p.price,
+                salePrice: p.salePrice,
+                image: p.imageUrl,
+                brand: p.brand,
+                size: '',
+                color: '',
+                quantity: 1
+            });
+        }
+
         function fullImageUrl(url) {
             if (!url) return null;
             if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
@@ -345,11 +636,11 @@
 
                     ${badge ? `<div class="absolute top-3 left-3 flex flex-col gap-1">${badge}</div>` : ''}
 
-                    <button onclick="event.preventDefault(); event.stopPropagation();" class="heart-btn absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center hover:bg-white">
-                        <svg class="w-4 h-4" fill="none" stroke="#111" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/></svg>
+                    <button data-wishlist-id="${product.id}" onclick="event.preventDefault(); event.stopPropagation(); Wishlist.toggle(${product.id});" class="heart-btn absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center hover:bg-white">
+                        <svg class="w-4 h-4" fill="${Wishlist.has(product.id) ? '#DC2626' : 'none'}" stroke="${Wishlist.has(product.id) ? '#DC2626' : '#111'}" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/></svg>
                     </button>
 
-                    <button onclick="event.preventDefault(); event.stopPropagation();" class="add-btn absolute bottom-3 left-3 right-3 bg-black text-white text-xs font-bold uppercase py-3 hover:bg-red-600 ${outOfStock ? 'opacity-50 cursor-not-allowed' : ''}" ${outOfStock ? 'disabled' : ''}>
+                    <button onclick="event.preventDefault(); event.stopPropagation(); quickAddToCart(${product.id})" class="add-btn absolute bottom-3 left-3 right-3 bg-black text-white text-xs font-bold uppercase py-3 hover:bg-red-600 ${outOfStock ? 'opacity-50 cursor-not-allowed' : ''}" ${outOfStock ? 'disabled' : ''}>
                         ${outOfStock ? 'Hết hàng' : '+ Thêm vào giỏ'}
                     </button>
                 </div>
@@ -471,32 +762,93 @@
             });
         });
 
-        // ===== LOGIN từ trang chủ =====
+        // ===== AUTH (Login + Register + Logout) =====
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `fixed bottom-6 right-6 z-[200] px-6 py-4 rounded-lg shadow-2xl font-semibold ${isError ? 'bg-red-600' : 'bg-black'} text-white`;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 3000);
+        }
+
         function openLoginModal() {
+            document.getElementById('registerModal').classList.add('hidden');
             document.getElementById('loginModal').classList.remove('hidden');
             setTimeout(() => document.getElementById('loginHomeUser').focus(), 50);
+        }
+        function openRegisterModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('registerModal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('regFullName').focus(), 50);
+        }
+        function switchToRegister() { openRegisterModal(); }
+        function switchToLogin() { openLoginModal(); }
+
+        function toggleUserMenu() {
+            document.getElementById('userDropdown').classList.toggle('hidden');
+        }
+        document.addEventListener('click', (e) => {
+            const userActions = document.getElementById('userActions');
+            if (userActions && !userActions.contains(e.target)) {
+                document.getElementById('userDropdown').classList.add('hidden');
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_user');
+            refreshAuthUI();
+            showToast('Đã đăng xuất');
         }
 
         function refreshAuthUI() {
             const userJson = localStorage.getItem('admin_user');
-            const dashLink = document.getElementById('dashboardLink');
-            const loginBtn = document.getElementById('loginBtn');
+            const guestActions = document.getElementById('guestActions');
+            const userActions = document.getElementById('userActions');
+            const adminMenuLink = document.getElementById('adminMenuLink');
+            const notifBtn = document.getElementById('notifBtn');
+            if (notifBtn) notifBtn.classList.toggle('hidden', !userJson);
+
             if (userJson) {
                 try {
                     const u = JSON.parse(userJson);
-                    if (u && u.role === 'Admin') {
-                        dashLink.classList.remove('hidden');
-                        dashLink.classList.add('flex');
-                        loginBtn.classList.add('hidden');
+                    if (u) {
+                        // Hiển thị user actions
+                        guestActions.classList.add('hidden');
+                        guestActions.classList.remove('md:flex');
+                        userActions.classList.remove('hidden');
+
+                        const displayName = u.fullName || u.username || 'User';
+                        const initial = displayName.charAt(0).toUpperCase();
+                        document.getElementById('userAvatar').textContent = initial;
+                        document.getElementById('userDisplayName').textContent = displayName;
+                        document.getElementById('dropdownName').textContent = displayName;
+                        document.getElementById('dropdownEmail').textContent = u.email || '—';
+
+                        const roleBadge = document.getElementById('dropdownRoleBadge');
+                        if (u.role === 'Admin') {
+                            roleBadge.textContent = 'Admin';
+                            roleBadge.className = 'mt-2 inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-red-100 text-red-700';
+                            adminMenuLink.classList.remove('hidden');
+                            adminMenuLink.classList.add('flex');
+                        } else {
+                            roleBadge.textContent = 'Customer';
+                            roleBadge.className = 'mt-2 inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700';
+                            adminMenuLink.classList.add('hidden');
+                            adminMenuLink.classList.remove('flex');
+                        }
                         return;
                     }
                 } catch {}
             }
-            dashLink.classList.add('hidden');
-            dashLink.classList.remove('flex');
-            loginBtn.classList.remove('hidden');
+
+            // Guest mode
+            guestActions.classList.remove('hidden');
+            guestActions.classList.add('md:flex');
+            userActions.classList.add('hidden');
         }
 
+        // Login form
         document.getElementById('loginFormHome').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('loginHomeUser').value;
@@ -521,6 +873,7 @@
                 } else {
                     document.getElementById('loginModal').classList.add('hidden');
                     refreshAuthUI();
+                    showToast(`Xin chào ${data.user.fullName || data.user.username}!`);
                 }
             } catch (err) {
                 errEl.textContent = err.message;
@@ -528,8 +881,124 @@
             }
         });
 
+        // Register form
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fullName = document.getElementById('regFullName').value.trim();
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const passwordConfirm = document.getElementById('regPasswordConfirm').value;
+            const errEl = document.getElementById('registerError');
+            errEl.classList.add('hidden');
+
+            if (password !== passwordConfirm) {
+                errEl.textContent = 'Mật khẩu xác nhận không khớp';
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const res = await fetch('http://localhost:5083/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, fullName, email })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ message: 'Đăng ký thất bại' }));
+                    throw new Error(err.message);
+                }
+                const data = await res.json();
+                localStorage.setItem('admin_token', data.token);
+                localStorage.setItem('admin_user', JSON.stringify(data.user));
+                document.getElementById('registerModal').classList.add('hidden');
+                document.getElementById('registerForm').reset();
+                refreshAuthUI();
+                showToast(`Chào mừng ${data.user.fullName}! Đăng ký thành công.`);
+            } catch (err) {
+                errEl.textContent = err.message;
+                errEl.classList.remove('hidden');
+            }
+        });
+
+        // ===== Promo marquee — content động theo thời gian =====
+        const PROMO_ITEMS = [
+            { icon: '🚚', text: 'MIỄN PHÍ VẬN CHUYỂN ĐƠN TỪ 1.000.000₫' },
+            { icon: '🎁', text: 'GIẢM 10% CHO ĐƠN ĐẦU TIÊN — MÃ NEWTOADLV' },
+            { icon: '💝', text: 'ĐƠN TỪ 2 TRIỆU NHẬN VOUCHER 200K' },
+            { icon: '🎉', text: 'ĐƠN TỪ 3 TRIỆU NHẬN VOUCHER 400K' },
+            { icon: '👑', text: 'ĐƠN TỪ 5 TRIỆU TẶNG 1 SẢN PHẨM BẤT KỲ' },
+            { icon: '♻️', text: 'ĐỔI TRẢ MIỄN PHÍ TRONG 7 NGÀY' },
+            { icon: '✨', text: 'BST 26SS — BABY FACE COLLECTION ĐÃ RA MẮT' },
+            { icon: '📞', text: 'HOTLINE 1900 0000 — TƯ VẤN 24/7' }
+        ];
+        function renderPromoMarquee() {
+            const track = document.getElementById('promoTrack');
+            if (!track) return;
+            // Duplicate list 2 lần để loop seamless (translateX -50% = qua đúng nửa = 1 lần list)
+            const html = PROMO_ITEMS.map(p =>
+                `<span class="marquee-item"><span>${p.icon}</span><span>${p.text}</span></span>`
+            ).join('');
+            track.innerHTML = html + html;
+        }
+        renderPromoMarquee();
+
+        // ===== PROMO POPUP =====
+        const PROMO_KEY = 'adlv_promo_seen_at';
+        function shouldShowPromo() {
+            const seen = localStorage.getItem(PROMO_KEY);
+            if (!seen) return true;
+            return (Date.now() - parseInt(seen)) > 24 * 3600 * 1000;
+        }
+        function dismissPromo() {
+            if (document.getElementById('promoSkip24h').checked) {
+                localStorage.setItem(PROMO_KEY, Date.now().toString());
+            }
+            document.getElementById('promoModal').classList.add('hidden');
+        }
+        function showPromoModal() {
+            if (!shouldShowPromo()) return;
+            setTimeout(() => {
+                document.getElementById('promoModal').classList.remove('hidden');
+            }, 800);
+        }
+
+        // ===== HERO CAROUSEL =====
+        let heroCurrentSlide = 0;
+        let heroTimer = null;
+        const heroSlides = document.querySelectorAll('.hero-slide');
+        const heroDots = document.querySelectorAll('.hero-dot');
+
+        function heroGoTo(idx) {
+            idx = (idx + heroSlides.length) % heroSlides.length;
+            heroSlides[heroCurrentSlide].classList.remove('active');
+            heroDots[heroCurrentSlide].classList.remove('active');
+            heroCurrentSlide = idx;
+            heroSlides[idx].classList.add('active');
+            heroDots[idx].classList.add('active');
+        }
+        function heroNext() { heroGoTo(heroCurrentSlide + 1); resetHeroTimer(); }
+        function heroPrev() { heroGoTo(heroCurrentSlide - 1); resetHeroTimer(); }
+        function startHeroTimer() {
+            heroTimer = setInterval(() => heroGoTo(heroCurrentSlide + 1), 6000);
+        }
+        function resetHeroTimer() {
+            if (heroTimer) clearInterval(heroTimer);
+            startHeroTimer();
+        }
+
+        heroDots.forEach(dot => {
+            dot.onclick = () => { heroGoTo(parseInt(dot.dataset.slide)); resetHeroTimer(); };
+        });
+        const heroCarousel = document.getElementById('heroCarousel');
+        if (heroCarousel) {
+            heroCarousel.addEventListener('mouseenter', () => clearInterval(heroTimer));
+            heroCarousel.addEventListener('mouseleave', startHeroTimer);
+        }
+        startHeroTimer();
+
         refreshAuthUI();
-        window.onload = loadAll;
+        window.onload = () => { loadAll(); showPromoModal(); };
     </script>
 </body>
 </html>
