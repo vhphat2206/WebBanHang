@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tài khoản của tôi - ADLV Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #FAFAFA; color: #111; }
+        input:focus, select:focus, textarea:focus { outline:none; border-color:#111; box-shadow:0 0 0 3px rgba(0,0,0,0.04); }
+        .tab-link.active { background: #111; color: white; }
+        .tab-link:not(.active):hover { background: #f3f4f6; }
+        .stat-card { transition: transform 0.15s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .skeleton { background: linear-gradient(90deg, #f5f5f5 25%, #ebebeb 50%, #f5f5f5 75%); background-size: 200% 100%; animation: skl 1.4s infinite; }
+        @keyframes skl { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-100">
+        <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="index.html" class="block flex-shrink-0"><img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-10 w-auto"/></a>
+            <nav class="hidden lg:flex items-center gap-7 text-[13px] font-semibold uppercase tracking-wide">
+                <a href="index.html" class="hover:text-red-600">Trang chủ</a>
+                <a href="category.html?type=all" class="hover:text-red-600">Sản phẩm</a>
+                <a href="wishlist.html" class="hover:text-red-600">Yêu thích</a>
+                <a href="orders.html" class="hover:text-red-600">Đơn hàng</a>
+            </nav>
+            <div class="flex items-center gap-3">
+                <button onclick="Notifications.openDropdown()" class="relative" aria-label="Thông báo">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span class="notif-badge absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center" style="display:none">0</span>
+                </button>
+                <button onclick="Cart.openDrawer()" class="relative">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <span class="cart-badge absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <script src="assets/js/cart.js"></script>
+
+    <main class="max-w-[1200px] mx-auto px-6 py-10">
+        <h1 class="text-3xl md:text-4xl font-black uppercase tracking-tight mb-2">Tài khoản của tôi</h1>
+        <p class="text-gray-500 text-sm mb-8" id="userGreeting">—</p>
+
+        <div id="needLogin" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div class="font-bold text-yellow-800">Vui lòng đăng nhập</div>
+            <a href="index.html" class="text-sm text-yellow-700 underline">← Về trang chủ</a>
+        </div>
+
+        <div id="appContent" class="hidden">
+            <!-- STATS DASHBOARD -->
+            <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="stat-card bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+                    <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Tổng đơn</div>
+                    <div class="text-3xl font-black" id="statOrders">—</div>
+                    <div class="text-[11px] text-gray-400 mt-1" id="statOrdersSub">—</div>
+                </div>
+                <div class="stat-card bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+                    <div class="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-1">Đã chi tiêu</div>
+                    <div class="text-3xl font-black" id="statSpent">—</div>
+                    <div class="text-[11px] text-gray-400 mt-1">Tổng cộng từ trước đến nay</div>
+                </div>
+                <div class="stat-card bg-white border border-amber-200 rounded-2xl p-5 shadow-sm">
+                    <div class="text-[10px] uppercase tracking-widest text-amber-700 font-bold mb-1">🎁 Voucher</div>
+                    <div class="text-3xl font-black text-amber-700" id="statVouchers">—</div>
+                    <div class="text-[11px] text-gray-400 mt-1">Đang còn hạn</div>
+                </div>
+                <div class="stat-card bg-gradient-to-br from-gray-900 to-black text-white rounded-2xl p-5 shadow-sm">
+                    <div class="text-[10px] uppercase tracking-widest text-white/60 font-bold mb-1">Thành viên</div>
+                    <div class="text-3xl font-black" id="statMember">—</div>
+                    <div class="text-[11px] text-white/60 mt-1" id="statSince">—</div>
+                </div>
+            </section>
+
+            <div class="grid lg:grid-cols-[260px_1fr] gap-8">
+                <!-- SIDEBAR -->
+                <aside class="bg-white rounded-lg p-3 self-start">
+                    <button class="tab-link active w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left" data-tab="profile">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        Thông tin cá nhân
+                    </button>
+                    <button class="tab-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left mt-1" data-tab="password">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        Đổi mật khẩu
+                    </button>
+                    <button class="tab-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left mt-1" data-tab="vouchers">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                        <span class="flex-1 text-left">Voucher của tôi</span>
+                        <span id="voucherBadge" class="hidden text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">0</span>
+                    </button>
+                    <button class="tab-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left mt-1" data-tab="recent">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        Đơn gần đây
+                    </button>
+                    <a href="orders.html" class="tab-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left mt-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        Tất cả đơn hàng
+                    </a>
+                    <a href="wishlist.html" class="tab-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left mt-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/></svg>
+                        Yêu thích
+                    </a>
+                    <div class="border-t border-gray-100 my-2"></div>
+                    <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-left text-red-600 hover:bg-red-50">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        Đăng xuất
+                    </button>
+                </aside>
+
+                <!-- CONTENT -->
+                <section>
+                    <!-- TAB: Thông tin cá nhân -->
+                    <div id="tab-profile" class="bg-white rounded-lg p-8">
+                        <h2 class="text-xl font-black mb-6">Thông tin cá nhân</h2>
+
+                        <div class="mb-6 p-4 bg-gray-50 rounded-lg flex items-center gap-4">
+                            <div class="w-16 h-16 bg-black text-white rounded-full flex items-center justify-center text-2xl font-black" id="avatar">A</div>
+                            <div>
+                                <div class="text-xs uppercase tracking-wider text-gray-500 mb-1">Tên đăng nhập</div>
+                                <div class="font-mono font-bold" id="username">—</div>
+                                <div class="mt-1 inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded" id="roleBadge">—</div>
+                            </div>
+                        </div>
+
+                        <form id="profileForm" class="space-y-4">
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Họ và tên *</label>
+                                    <input type="text" id="prof_fullName" required class="w-full px-4 py-3 border border-gray-200 rounded-lg"/>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Email *</label>
+                                    <input type="email" id="prof_email" required class="w-full px-4 py-3 border border-gray-200 rounded-lg"/>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Số điện thoại</label>
+                                    <input type="tel" id="prof_phone" pattern="[0-9]{10,11}" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="0901234567"/>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Ngày sinh</label>
+                                    <input type="date" id="prof_dob" class="w-full px-4 py-3 border border-gray-200 rounded-lg"/>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Giới tính</label>
+                                    <div class="flex gap-3">
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1 border border-gray-200 px-3 py-2.5 rounded-lg">
+                                            <input type="radio" name="gender" value="Male" class="accent-black"/> Nam
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1 border border-gray-200 px-3 py-2.5 rounded-lg">
+                                            <input type="radio" name="gender" value="Female" class="accent-black"/> Nữ
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer flex-1 border border-gray-200 px-3 py-2.5 rounded-lg">
+                                            <input type="radio" name="gender" value="Other" class="accent-black"/> Khác
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Địa chỉ mặc định</label>
+                                <textarea id="prof_address" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"></textarea>
+                                <div class="text-[11px] text-gray-400 mt-1">Địa chỉ này sẽ được tự fill khi thanh toán</div>
+                            </div>
+                            <div id="profileMsg" class="hidden text-sm"></div>
+                            <button type="submit" class="bg-black text-white font-bold uppercase px-8 py-3 rounded-lg hover:bg-red-600 transition">Cập nhật</button>
+                        </form>
+                    </div>
+
+                    <!-- TAB: Đổi mật khẩu -->
+                    <div id="tab-password" class="hidden bg-white rounded-lg p-8">
+                        <h2 class="text-xl font-black mb-2">Đổi mật khẩu</h2>
+                        <p class="text-sm text-gray-500 mb-6">Mật khẩu mạnh: ít nhất 6 ký tự, có thể trộn chữ + số.</p>
+                        <form id="passwordForm" class="space-y-4 max-w-md">
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mật khẩu hiện tại *</label>
+                                <input type="password" id="pwd_old" required autocomplete="current-password" class="w-full px-4 py-3 border border-gray-200 rounded-lg"/>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mật khẩu mới *</label>
+                                <input type="password" id="pwd_new" required minlength="6" autocomplete="new-password" class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="Tối thiểu 6 ký tự"/>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Xác nhận mật khẩu mới *</label>
+                                <input type="password" id="pwd_confirm" required minlength="6" autocomplete="new-password" class="w-full px-4 py-3 border border-gray-200 rounded-lg"/>
+                            </div>
+                            <div id="passwordMsg" class="hidden text-sm"></div>
+                            <button type="submit" class="bg-black text-white font-bold uppercase px-8 py-3 rounded-lg hover:bg-red-600 transition">Đổi mật khẩu</button>
+                        </form>
+                    </div>
+
+                    <!-- TAB: Voucher -->
+                    <div id="tab-vouchers" class="hidden bg-white rounded-lg p-8">
+                        <h2 class="text-xl font-black mb-2">Voucher của tôi</h2>
+                        <p class="text-sm text-gray-500 mb-6">Các voucher bạn đã nhận từ ADLV — đặt đơn ≥ 2 triệu để nhận thêm.</p>
+                        <div id="voucherList" class="space-y-3"></div>
+                    </div>
+
+                    <!-- TAB: Đơn gần đây -->
+                    <div id="tab-recent" class="hidden bg-white rounded-lg p-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-black">Đơn hàng gần đây</h2>
+                            <a href="orders.html" class="text-sm font-semibold text-red-600 hover:underline">Xem tất cả →</a>
+                        </div>
+                        <div id="recentList" class="space-y-3"></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="hidden fixed bottom-6 right-6 z-[100] bg-black text-white px-6 py-4 rounded-lg shadow-2xl font-semibold"></div>
+
+    <script>
+        const API_HOST = 'http://localhost:5083';
+        const API = API_HOST + '/api';
+        const token = localStorage.getItem('admin_token');
+        let user = JSON.parse(localStorage.getItem('admin_user') || 'null');
+
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `fixed bottom-6 right-6 z-[100] px-6 py-4 rounded-lg shadow-2xl font-semibold ${isError ? 'bg-red-600' : 'bg-black'} text-white`;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 3000);
+        }
+        function fmt(n) { return Math.round(n).toLocaleString('vi-VN') + '₫'; }
+        function fullImageUrl(u) {
+            if (!u) return null;
+            if (u.startsWith('http')) return u;
+            if (u.startsWith('/')) return API_HOST + u;
+            return u;
+        }
+        function logout() {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_user');
+            window.location.href = 'index.html';
+        }
+
+        if (!token || !user) {
+            document.getElementById('needLogin').classList.remove('hidden');
+        } else {
+            init();
+        }
+
+        async function init() {
+            document.getElementById('appContent').classList.remove('hidden');
+            document.getElementById('userGreeting').textContent = `Xin chào, ${user.fullName || user.username}`;
+            document.getElementById('avatar').textContent = (user.fullName || user.username).charAt(0).toUpperCase();
+            document.getElementById('username').textContent = user.username;
+
+            // Fetch full user info (with new fields)
+            try {
+                const fullUser = await (await fetch(API + '/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })).json();
+                Object.assign(user, fullUser);
+                localStorage.setItem('admin_user', JSON.stringify(user));
+                fillProfile(fullUser);
+            } catch {}
+
+            // Stats
+            loadStats();
+            loadVouchers();
+            loadRecentOrders();
+        }
+
+        function fillProfile(u) {
+            document.getElementById('prof_fullName').value = u.fullName || '';
+            document.getElementById('prof_email').value = u.email || '';
+            document.getElementById('prof_phone').value = u.phone || '';
+            document.getElementById('prof_address').value = u.address || '';
+            if (u.dateOfBirth) {
+                document.getElementById('prof_dob').value = u.dateOfBirth.substring(0, 10);
+            }
+            if (u.gender) {
+                const r = document.querySelector(`input[name=gender][value="${u.gender}"]`);
+                if (r) r.checked = true;
+            }
+            const badge = document.getElementById('roleBadge');
+            badge.textContent = u.role;
+            badge.className = `mt-1 inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
+                u.role === 'Admin' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+            }`;
+        }
+
+        async function loadStats() {
+            try {
+                const s = await (await fetch(API + '/auth/stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })).json();
+                document.getElementById('statOrders').textContent = s.totalOrders;
+                document.getElementById('statOrdersSub').textContent =
+                    s.pendingOrders > 0 ? `${s.pendingOrders} đang xử lý` : 'Tất cả đã xong';
+                document.getElementById('statSpent').textContent = fmt(s.totalSpent);
+                document.getElementById('statVouchers').textContent = s.activeVouchers;
+                if (s.activeVouchers > 0) {
+                    const badge = document.getElementById('voucherBadge');
+                    badge.textContent = s.activeVouchers;
+                    badge.classList.remove('hidden');
+                }
+                document.getElementById('statMember').textContent = `${s.memberDays}d`;
+                const since = new Date(s.memberSince);
+                document.getElementById('statSince').textContent = `Từ ${since.toLocaleDateString('vi-VN')}`;
+            } catch {}
+        }
+
+        async function loadVouchers() {
+            const wrap = document.getElementById('voucherList');
+            wrap.innerHTML = '<div class="h-16 skeleton rounded"></div>';
+            try {
+                const vouchers = await (await fetch(API + '/orders/my-vouchers', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })).json();
+                if (!vouchers.length) {
+                    wrap.innerHTML = `
+                        <div class="text-center py-12 text-gray-400">
+                            <div class="text-4xl mb-2">🎁</div>
+                            <div class="font-semibold">Chưa có voucher</div>
+                            <div class="text-xs mt-1">Đặt đơn ≥ 2 triệu để nhận voucher đầu tiên</div>
+                        </div>`;
+                    return;
+                }
+                wrap.innerHTML = vouchers.map(v => {
+                    const exp = new Date(v.expiresAt);
+                    const daysLeft = Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24));
+                    const expClass = daysLeft <= 7 ? 'text-red-600' : 'text-gray-500';
+                    return `
+                    <div class="flex items-start justify-between p-4 border-2 border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg">
+                        <div class="flex-1">
+                            <div class="text-[10px] uppercase tracking-widest text-amber-700 font-bold">🎁 Voucher · −${v.discount}</div>
+                            <div class="font-bold text-base mt-1">${v.description}</div>
+                            <code class="inline-block mt-2 px-3 py-1 bg-white border border-amber-300 rounded text-xs font-mono">${v.code}</code>
+                            ${v.minSubtotal > 0 ? `<div class="text-[11px] text-gray-500 mt-1.5">Đơn tối thiểu: ${fmt(v.minSubtotal)}</div>` : ''}
+                        </div>
+                        <div class="text-right text-xs ${expClass}">
+                            <div class="font-semibold">HSD</div>
+                            <div>${exp.toLocaleDateString('vi-VN')}</div>
+                            <div class="font-bold">${daysLeft} ngày</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch {
+                wrap.innerHTML = '<div class="text-sm text-red-600">Lỗi tải voucher</div>';
+            }
+        }
+
+        async function loadRecentOrders() {
+            const wrap = document.getElementById('recentList');
+            wrap.innerHTML = '<div class="h-20 skeleton rounded"></div>';
+            try {
+                const orders = await (await fetch(API + '/orders/my', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })).json();
+                const recent = orders.slice(0, 5);
+                if (!recent.length) {
+                    wrap.innerHTML = `
+                        <div class="text-center py-12 text-gray-400">
+                            <div class="text-4xl mb-2">📦</div>
+                            <div class="font-semibold">Chưa có đơn hàng</div>
+                            <a href="category.html?type=all" class="inline-block mt-3 text-red-600 underline text-sm">Khám phá sản phẩm →</a>
+                        </div>`;
+                    return;
+                }
+                const statusLabel = (s) => ({
+                    'Pending':'Chờ xác nhận', 'Confirmed':'Đã xác nhận',
+                    'Shipping':'Đang giao', 'Completed':'Hoàn tất', 'Cancelled':'Đã hủy'
+                })[s] || s;
+                const statusColor = (s) => ({
+                    'Pending':'bg-amber-100 text-amber-700',
+                    'Confirmed':'bg-blue-100 text-blue-700',
+                    'Shipping':'bg-indigo-100 text-indigo-700',
+                    'Completed':'bg-emerald-100 text-emerald-700',
+                    'Cancelled':'bg-red-100 text-red-700'
+                })[s] || 'bg-gray-100';
+
+                wrap.innerHTML = recent.map(o => {
+                    const d = new Date(o.createdAt).toLocaleString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+                    const firstImg = fullImageUrl(o.items[0]?.productImage);
+                    return `
+                    <div class="flex items-center gap-4 p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition">
+                        <div class="w-14 h-14 bg-gray-100 flex-shrink-0 overflow-hidden rounded">
+                            ${firstImg ? `<img src="${firstImg}" class="w-full h-full object-cover"/>` : '<div class="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900"></div>'}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-mono font-bold text-xs">${o.orderCode}</div>
+                            <div class="text-xs text-gray-500">${d} · ${o.items.length} SP</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold">${fmt(o.total)}</div>
+                            <span class="${statusColor(o.status)} inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded mt-1">${statusLabel(o.status)}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+            } catch {
+                wrap.innerHTML = '<div class="text-sm text-red-600">Lỗi tải đơn hàng</div>';
+            }
+        }
+
+        // Tab switching
+        document.querySelectorAll('.tab-link[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-link[data-tab]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                ['profile', 'password', 'vouchers', 'recent'].forEach(t => {
+                    document.getElementById('tab-' + t).classList.toggle('hidden', t !== btn.dataset.tab);
+                });
+            });
+        });
+
+        // Profile form
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = document.getElementById('profileMsg');
+            msg.classList.add('hidden');
+            const genderRadio = document.querySelector('input[name=gender]:checked');
+            try {
+                const res = await fetch(API + '/auth/me', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({
+                        fullName: document.getElementById('prof_fullName').value,
+                        email: document.getElementById('prof_email').value,
+                        phone: document.getElementById('prof_phone').value,
+                        gender: genderRadio ? genderRadio.value : '',
+                        dateOfBirth: document.getElementById('prof_dob').value || null,
+                        address: document.getElementById('prof_address').value
+                    })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ message: 'Cập nhật thất bại' }));
+                    throw new Error(err.message);
+                }
+                const updated = await res.json();
+                user = { ...user, ...updated };
+                localStorage.setItem('admin_user', JSON.stringify(user));
+                document.getElementById('userGreeting').textContent = `Xin chào, ${user.fullName || user.username}`;
+                showToast('✓ Đã cập nhật thông tin');
+            } catch (err) {
+                msg.textContent = err.message;
+                msg.classList.remove('hidden');
+                msg.classList.add('text-red-600');
+            }
+        });
+
+        // Password form
+        document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const oldP = document.getElementById('pwd_old').value;
+            const newP = document.getElementById('pwd_new').value;
+            const confirmP = document.getElementById('pwd_confirm').value;
+            const msg = document.getElementById('passwordMsg');
+            msg.classList.add('hidden');
+
+            if (newP !== confirmP) {
+                msg.textContent = 'Xác nhận mật khẩu không khớp';
+                msg.classList.remove('hidden');
+                msg.classList.add('text-red-600');
+                return;
+            }
+            try {
+                const res = await fetch(API + '/auth/password', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ oldPassword: oldP, newPassword: newP })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ message: 'Đổi mật khẩu thất bại' }));
+                    throw new Error(err.message);
+                }
+                document.getElementById('passwordForm').reset();
+                showToast('✓ Đã đổi mật khẩu thành công');
+            } catch (err) {
+                msg.textContent = err.message;
+                msg.classList.remove('hidden');
+                msg.classList.add('text-red-600');
+            }
+        });
+    </script>
+</body>
+</html>

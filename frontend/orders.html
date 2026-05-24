@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn hàng của tôi - ADLV Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #FAFAFA; color: #111; }
+        .status-Pending    { background:#FEF3C7; color:#92400E; }
+        .status-Confirmed  { background:#DBEAFE; color:#1E40AF; }
+        .status-Shipping   { background:#E0E7FF; color:#3730A3; }
+        .status-Completed  { background:#D1FAE5; color:#065F46; }
+        .status-Cancelled  { background:#FEE2E2; color:#991B1B; }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <header class="sticky top-0 z-40 bg-white border-b border-gray-100">
+        <div class="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="index.html" class="block flex-shrink-0"><img src="assets/logo-adlv.png" alt="acmé de la vie ADLV" class="h-10 w-auto"/></a>
+            <nav class="hidden md:flex items-center gap-6 text-sm font-semibold uppercase">
+                <a href="index.html" class="hover:text-red-600">Trang chủ</a>
+                <a href="category.html?type=all" class="hover:text-red-600">Sản phẩm</a>
+                <a href="cart.html" class="hover:text-red-600">Giỏ hàng</a>
+            </nav>
+            <div class="flex items-center gap-3 text-sm">
+                <span class="text-gray-500" id="userName">—</span>
+                <button onclick="logout()" class="text-red-600 hover:underline font-semibold">Đăng xuất</button>
+            </div>
+        </div>
+    </header>
+
+    <script src="assets/js/cart.js"></script>
+
+    <main class="max-w-[1100px] mx-auto px-6 py-10">
+        <div id="successBanner" class="hidden bg-emerald-50 border-l-4 border-emerald-500 p-5 mb-8 rounded">
+            <div class="font-bold text-emerald-800">🎉 Đặt hàng thành công!</div>
+            <div class="text-sm text-emerald-700 mt-1">Mã đơn hàng: <code id="successCode" class="font-bold"></code>. Chúng tôi sẽ liên hệ xác nhận sớm.</div>
+        </div>
+
+        <h1 class="text-3xl md:text-4xl font-black uppercase tracking-tight mb-2">Đơn hàng của tôi</h1>
+        <p class="text-gray-500 text-sm mb-8" id="ordersCount">Đang tải...</p>
+
+        <div id="needLogin" class="hidden text-center py-24">
+            <div class="font-bold text-lg mb-2">Vui lòng đăng nhập</div>
+            <a href="index.html" class="text-red-600 underline">← Về trang chủ để đăng nhập</a>
+        </div>
+
+        <div id="emptyState" class="hidden text-center py-24">
+            <svg class="w-20 h-20 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg>
+            <h2 class="text-xl font-bold mb-2">Bạn chưa có đơn hàng nào</h2>
+            <a href="category.html?type=all" class="inline-block mt-3 bg-black text-white font-bold uppercase px-8 py-3 hover:bg-red-600 transition">Mua sắm ngay</a>
+        </div>
+
+        <div id="ordersList" class="space-y-4"></div>
+    </main>
+
+    <script>
+        const API_HOST = 'http://localhost:5083';
+        const API = API_HOST + '/api';
+
+        function fullImageUrl(u) {
+            if (!u) return null;
+            if (u.startsWith('http')) return u;
+            if (u.startsWith('/')) return API_HOST + u;
+            return u;
+        }
+        function fmt(n) { return Math.round(n).toLocaleString('vi-VN') + '₫'; }
+        function dateFmt(s) {
+            const d = new Date(s);
+            return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+
+        const token = localStorage.getItem('admin_token');
+        const user = JSON.parse(localStorage.getItem('admin_user') || 'null');
+
+        function logout() {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_user');
+            window.location.href = 'index.html';
+        }
+
+        const successCode = new URLSearchParams(window.location.search).get('success');
+        if (successCode) {
+            document.getElementById('successBanner').classList.remove('hidden');
+            document.getElementById('successCode').textContent = successCode;
+        }
+
+        async function load() {
+            if (!token || !user) {
+                document.getElementById('needLogin').classList.remove('hidden');
+                document.getElementById('ordersCount').textContent = '';
+                return;
+            }
+            document.getElementById('userName').textContent = user.fullName || user.username;
+
+            try {
+                const res = await fetch(API + '/orders/my', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) { logout(); return; }
+                const orders = await res.json();
+                render(orders);
+            } catch (err) {
+                document.getElementById('ordersCount').textContent = 'Lỗi tải đơn hàng';
+            }
+        }
+
+        function statusLabel(s) {
+            return ({
+                'Pending': 'Chờ xác nhận',
+                'Confirmed': 'Đã xác nhận',
+                'Shipping': 'Đang giao',
+                'Completed': 'Hoàn tất',
+                'Cancelled': 'Đã hủy'
+            })[s] || s;
+        }
+
+        function render(orders) {
+            document.getElementById('ordersCount').textContent = `${orders.length} đơn hàng`;
+            if (!orders.length) {
+                document.getElementById('emptyState').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('ordersList').innerHTML = orders.map(o => {
+                const itemsHtml = (o.items || []).map(it => {
+                    const img = fullImageUrl(it.productImage);
+                    return `
+                    <div class="flex gap-3 items-center py-3 border-b border-gray-100 last:border-b-0">
+                        <div class="w-14 h-14 flex-shrink-0 bg-gray-100 overflow-hidden">
+                            ${img
+                                ? `<img src="${img}" class="w-full h-full object-cover"/>`
+                                : `<div class="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white font-black text-sm">A</div>`}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-semibold line-clamp-1">${it.productName}</div>
+                            <div class="text-xs text-gray-500">
+                                ${it.size ? `Size ${it.size}` : ''}${it.size && it.color ? ' · ' : ''}${it.color || ''}
+                                · SL: ${it.quantity}
+                            </div>
+                        </div>
+                        <div class="text-sm font-semibold">${fmt(it.subtotal)}</div>
+                    </div>`;
+                }).join('');
+
+                return `
+                <div class="bg-white rounded-lg overflow-hidden shadow-sm">
+                    <div class="flex flex-wrap items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50 gap-3">
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider">Mã đơn</div>
+                            <div class="font-mono font-bold text-sm">${o.orderCode}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider">Đặt lúc</div>
+                            <div class="text-sm font-semibold">${dateFmt(o.createdAt)}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider">Trạng thái</div>
+                            <span class="status-${o.status} inline-block text-xs font-bold uppercase px-3 py-1 rounded mt-1">${statusLabel(o.status)}</span>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wider">Tổng tiền</div>
+                            <div class="text-lg font-black">${fmt(o.total)}</div>
+                        </div>
+                    </div>
+                    <div class="px-6">
+                        ${itemsHtml}
+                    </div>
+                    <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50 text-sm">
+                        <div class="text-gray-600">
+                            📍 ${o.customerName} · ${o.phone} · ${o.shippingAddress}
+                        </div>
+                        ${o.status === 'Pending'
+                            ? `<button onclick="cancelOrder(${o.id})" class="text-red-600 hover:underline font-semibold">Hủy đơn</button>`
+                            : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function cancelOrder(id) {
+            if (!confirm('Bạn chắc chắn muốn hủy đơn này?')) return;
+            try {
+                const res = await fetch(`${API}/orders/${id}/cancel`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ message: 'Hủy thất bại' }));
+                    throw new Error(err.message);
+                }
+                load();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        load();
+    </script>
+</body>
+</html>

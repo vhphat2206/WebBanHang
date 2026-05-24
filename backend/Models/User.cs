@@ -24,6 +24,18 @@ namespace backend.Models
         [StringLength(20)]
         public string Role { get; set; } = "Customer";
 
+        [StringLength(20)]
+        public string Phone { get; set; } = string.Empty;
+
+        [StringLength(10)]
+        public string Gender { get; set; } = string.Empty;
+
+        public DateTime? DateOfBirth { get; set; }
+
+        public string Address { get; set; } = string.Empty;
+
+        public string AvatarUrl { get; set; } = string.Empty;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }
