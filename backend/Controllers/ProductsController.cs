@@ -135,16 +135,24 @@ namespace backend.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int id, [FromQuery] bool permanent = false)
         {
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound();
 
-            // Xóa hẳn — OrderItem có snapshot tên/giá/ảnh nên đơn hàng cũ vẫn hiển thị đúng,
-            // ProductId trong OrderItem sẽ tự set NULL (FK SetNull)
-            _context.Products.Remove(product);
+            if (permanent)
+            {
+                // Xóa hẳn khỏi DB — không thể hoàn tác
+                _context.Products.Remove(product);
+                await _context.SaveChangesAsync();
+                return Ok(new { message = "Đã xóa vĩnh viễn sản phẩm", permanent = true });
+            }
+
+            // Soft delete: đánh dấu IsDeleted=true → khách hàng không thấy, admin có thể hoàn tác
+            product.IsDeleted = true;
+            product.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
-            return Ok(new { message = "Đã xóa sản phẩm" });
+            return Ok(new { message = "Đã chuyển vào thùng rác", permanent = false, id = product.Id });
         }
 
         [HttpPut("{id}/restore")]

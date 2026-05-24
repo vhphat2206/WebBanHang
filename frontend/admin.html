@@ -116,10 +116,15 @@
                         <h1 class="text-3xl font-black">Sản phẩm</h1>
                         <p class="text-gray-500 text-sm mt-1" id="productCount">Đang tải...</p>
                     </div>
-                    <button onclick="openProductModal()" class="bg-black text-white font-bold uppercase text-sm px-6 py-3 rounded-lg hover:bg-red-600 transition flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                        Thêm sản phẩm
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <button id="trashToggle" onclick="toggleTrash()" class="text-sm font-semibold text-gray-700 hover:text-black px-4 py-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                            🗑️ Thùng rác
+                        </button>
+                        <button onclick="openProductModal()" class="bg-black text-white font-bold uppercase text-sm px-6 py-3 rounded-lg hover:bg-red-600 transition flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                            Thêm sản phẩm
+                        </button>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -499,16 +504,41 @@
     });
 
     // ===== PRODUCTS =====
+    let showTrash = false;
+
     async function loadProducts() {
         document.getElementById('productTableBody').innerHTML = Array(5).fill(0).map(() =>
             `<tr><td colspan="8" class="px-6 py-4"><div class="h-8 skeleton rounded"></div></td></tr>`
         ).join('');
         try {
-            products = await api('/products');
+            const all = await api('/products?includeDeleted=true');
+            products = showTrash ? all.filter(p => p.isDeleted) : all.filter(p => !p.isDeleted);
+            window._allProductsCache = all;
             renderProducts();
+            updateTrashBadge(all);
         } catch (err) {
             showToast(err.message, true);
         }
+    }
+
+    function updateTrashBadge(all) {
+        const trashCount = all.filter(p => p.isDeleted).length;
+        const badge = document.getElementById('trashBadge');
+        const toggle = document.getElementById('trashToggle');
+        if (badge) {
+            badge.textContent = trashCount;
+            badge.classList.toggle('hidden', trashCount === 0);
+        }
+        if (toggle) {
+            toggle.textContent = showTrash
+                ? `← Quay lại sản phẩm (${all.filter(p => !p.isDeleted).length})`
+                : `🗑️ Thùng rác${trashCount > 0 ? ` (${trashCount})` : ''}`;
+        }
+    }
+
+    function toggleTrash() {
+        showTrash = !showTrash;
+        loadProducts();
     }
 
     function renderProducts() {
@@ -550,8 +580,11 @@
                     <div class="flex flex-wrap gap-1">${badges.join('') || '<span class="text-gray-300 text-xs">—</span>'}</div>
                 </td>
                 <td class="px-6 py-4 text-right whitespace-nowrap">
-                    <button onclick="editProduct(${p.id})" class="text-blue-600 hover:text-blue-800 text-sm font-semibold mr-3">Sửa</button>
-                    <button onclick="deleteProduct(${p.id})" class="text-red-600 hover:text-red-800 text-sm font-semibold">Xóa</button>
+                    ${p.isDeleted
+                        ? `<button onclick="restoreProduct(${p.id})" class="text-emerald-600 hover:text-emerald-800 text-sm font-semibold mr-3">Khôi phục</button>
+                           <button onclick="permanentDeleteProduct(${p.id})" class="text-red-600 hover:text-red-800 text-sm font-semibold">Xóa vĩnh viễn</button>`
+                        : `<button onclick="editProduct(${p.id})" class="text-blue-600 hover:text-blue-800 text-sm font-semibold mr-3">Sửa</button>
+                           <button onclick="deleteProduct(${p.id})" class="text-red-600 hover:text-red-800 text-sm font-semibold">Xóa</button>`}
                 </td>
             </tr>`;
         }).join('');
@@ -611,14 +644,67 @@
 
     async function deleteProduct(id) {
         const p = products.find(x => x.id === id);
-        if (!confirm(`Xóa "${p.name}"?\n\nHành động này không thể hoàn tác.`)) return;
         try {
+            // Soft delete (chuyển vào thùng rác)
             await api(`/products/${id}`, { method: 'DELETE' });
-            showToast('Đã xóa sản phẩm');
+            showUndoToast(`Đã xóa "${p.name}"`, async () => {
+                // Hoàn tác → khôi phục
+                try {
+                    await api(`/products/${id}/restore`, { method: 'PUT' });
+                    showToast('Đã hoàn tác');
+                    loadProducts();
+                } catch (err) {
+                    showToast(err.message, true);
+                }
+            });
             loadProducts();
         } catch (err) {
             showToast(err.message, true);
         }
+    }
+
+    async function restoreProduct(id) {
+        try {
+            await api(`/products/${id}/restore`, { method: 'PUT' });
+            showToast('Đã khôi phục sản phẩm');
+            loadProducts();
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+
+    async function permanentDeleteProduct(id) {
+        const p = products.find(x => x.id === id);
+        if (!confirm(`⚠️ Xóa VĨNH VIỄN "${p.name}"?\n\nHành động này KHÔNG THỂ hoàn tác. Sản phẩm sẽ biến mất khỏi DB.`)) return;
+        try {
+            await api(`/products/${id}?permanent=true`, { method: 'DELETE' });
+            showToast('Đã xóa vĩnh viễn');
+            loadProducts();
+        } catch (err) {
+            showToast(err.message, true);
+        }
+    }
+
+    // Undo toast: hiện trong 8s, bấm "Hoàn tác" để revert
+    function showUndoToast(message, undoFn) {
+        let timer;
+        const el = document.createElement('div');
+        el.className = 'fixed bottom-6 right-6 z-[200] bg-black text-white px-5 py-4 rounded-lg shadow-2xl font-semibold flex items-center gap-4 min-w-[320px]';
+        el.innerHTML = `
+            <span>${message}</span>
+            <button class="undo-btn font-bold uppercase text-xs px-3 py-1.5 bg-white text-black rounded hover:bg-amber-400">↶ Hoàn tác</button>
+            <button class="close-btn text-white/60 hover:text-white text-xl leading-none">×</button>
+            <div class="undo-progress absolute bottom-0 left-0 h-0.5 bg-amber-400" style="width:100%; transition: width 8s linear;"></div>
+        `;
+        document.body.appendChild(el);
+
+        const close = () => { clearTimeout(timer); el.remove(); };
+        el.querySelector('.undo-btn').onclick = () => { close(); undoFn(); };
+        el.querySelector('.close-btn').onclick = close;
+
+        // Start progress bar countdown
+        requestAnimationFrame(() => el.querySelector('.undo-progress').style.width = '0%');
+        timer = setTimeout(close, 8000);
     }
 
     document.getElementById('productForm').addEventListener('submit', async (e) => {
