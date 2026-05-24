@@ -551,9 +551,23 @@
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify(payload)
                 });
+                if (res.status === 401) {
+                    // Token hết hạn → cần đăng nhập lại
+                    localStorage.removeItem('admin_token');
+                    localStorage.removeItem('admin_user');
+                    throw new Error('SESSION_EXPIRED');
+                }
                 if (!res.ok) {
-                    const err = await res.json().catch(() => ({ message: 'Đặt hàng thất bại' }));
-                    throw new Error(err.message);
+                    const errText = await res.text();
+                    let errMsg = `HTTP ${res.status}`;
+                    try {
+                        const errJson = JSON.parse(errText);
+                        errMsg = errJson.message || errJson.title || errMsg;
+                    } catch {
+                        if (errText) errMsg = errText.slice(0, 200);
+                    }
+                    console.error('[Order failed]', res.status, errText);
+                    throw new Error(errMsg);
                 }
                 const data = await res.json();
 
@@ -592,7 +606,19 @@
                 // Redirect sang trang success với animation
                 window.location.href = `order-success.html?code=${data.orderCode}`;
             } catch (err) {
-                errEl.textContent = err.message;
+                console.error('[Checkout error]', err);
+                if (err.message === 'SESSION_EXPIRED') {
+                    errEl.innerHTML = `<div class="bg-amber-50 border border-amber-300 rounded p-4">
+                        <div class="font-bold text-amber-900">⚠️ Phiên đăng nhập đã hết hạn</div>
+                        <div class="text-xs mt-1 text-amber-800">Vui lòng đăng nhập lại để tiếp tục đặt hàng.</div>
+                        <a href="index.html" class="inline-block mt-3 bg-black text-white text-xs font-bold uppercase px-5 py-2 rounded hover:bg-red-600">Đăng nhập lại</a>
+                    </div>`;
+                } else {
+                    errEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded p-3">
+                        <div class="font-bold">✗ Không đặt được đơn</div>
+                        <div class="text-xs mt-1">${err.message}</div>
+                    </div>`;
+                }
                 errEl.classList.remove('hidden');
                 btn.disabled = false;
                 btn.textContent = 'Đặt hàng';

@@ -143,6 +143,14 @@ namespace backend.Controllers
                 if (Vouchers.TryGetValue(voucherCode, out var rate))
                 {
                     // Voucher công khai (NEWTOADLV, WELCOME20)
+                    // Mỗi user chỉ dùng được 1 lần — check Orders cũ
+                    var alreadyUsed = await _context.Orders.AnyAsync(o =>
+                        o.UserId == CurrentUserId
+                        && o.VoucherCode.ToUpper() == voucherCode.ToUpper()
+                        && o.Status != "Cancelled");
+                    if (alreadyUsed)
+                        return BadRequest(new { message = $"Bạn đã sử dụng mã '{voucherCode}' rồi, mỗi tài khoản chỉ dùng 1 lần" });
+
                     discount = Math.Round(subtotal * rate, 0);
                 }
                 else
@@ -403,13 +411,31 @@ namespace backend.Controllers
 
         [HttpGet("vouchers")]
         [AllowAnonymous]
-        public IActionResult GetVouchers()
+        public async Task<IActionResult> GetVouchers()
         {
-            return Ok(new[]
+            var all = new[]
             {
                 new { code = "NEWTOADLV", description = "Giảm 10% cho đơn hàng đầu tiên", discount = "10%" },
                 new { code = "WELCOME20", description = "Giảm 20% cho khách hàng mới", discount = "20%" }
-            });
+            };
+
+            // Nếu user đã đăng nhập → lọc bỏ mã đã dùng (mỗi tài khoản 1 lần)
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var userId = CurrentUserId;
+                var usedCodes = (await _context.Orders
+                    .Where(o => o.UserId == userId
+                                && o.VoucherCode != ""
+                                && o.Status != "Cancelled")
+                    .Select(o => o.VoucherCode)
+                    .Distinct()
+                    .ToListAsync())
+                    .Select(c => c.ToUpper())
+                    .ToHashSet();
+
+                return Ok(all.Where(v => !usedCodes.Contains(v.code.ToUpper())).ToList());
+            }
+            return Ok(all);
         }
     }
 }
