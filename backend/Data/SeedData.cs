@@ -47,7 +47,7 @@ namespace backend.Data
                         Colors = "Đen,Trắng,Xanh Da Trời",
                         Stock = 50,
                         CategoryId = ao.Id,
-                        ImageUrl = "ao_adlv_teddy.jpg",
+                        ImageUrl = "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=914&q=80",
                         IsBestseller = true
                     },
                     new Product
@@ -63,7 +63,7 @@ namespace backend.Data
                         Colors = "Đen,Trắng",
                         Stock = 50,
                         CategoryId = ao.Id,
-                        ImageUrl = "ao_jordan.jpg",
+                        ImageUrl = "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=914&q=80",
                         IsNew = true
                     },
                     new Product
@@ -79,7 +79,7 @@ namespace backend.Data
                         Colors = "Đen,Xám",
                         Stock = 30,
                         CategoryId = quan.Id,
-                        ImageUrl = "quan_jordan.jpg"
+                        ImageUrl = "https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=914&q=80"
                     },
                     new Product
                     {
@@ -94,7 +94,7 @@ namespace backend.Data
                         Colors = "Xanh đậm,Đen",
                         Stock = 25,
                         CategoryId = quan.Id,
-                        ImageUrl = "quan_jean.jpg"
+                        ImageUrl = "https://images.unsplash.com/photo-1542272604-787c3835535d?w=914&q=80"
                     },
                     new Product
                     {
@@ -110,7 +110,7 @@ namespace backend.Data
                         Colors = "Đen-Trắng,Đỏ-Trắng",
                         Stock = 20,
                         CategoryId = giay.Id,
-                        ImageUrl = "giay_jordan.jpg",
+                        ImageUrl = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=914&q=80",
                         IsBestseller = true
                     },
                     new Product
@@ -126,7 +126,7 @@ namespace backend.Data
                         Colors = "Đen,Trắng,Xám",
                         Stock = 15,
                         CategoryId = giay.Id,
-                        ImageUrl = "giay_adidas.jpg",
+                        ImageUrl = "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=914&q=80",
                         IsNew = true
                     },
                     new Product
@@ -141,7 +141,7 @@ namespace backend.Data
                         Colors = "Đen,Nâu",
                         Stock = 40,
                         CategoryId = giay.Id,
-                        ImageUrl = "dep_nike.jpg"
+                        ImageUrl = "https://images.unsplash.com/photo-1603487742131-4160ec999306?w=914&q=80"
                     },
                     new Product
                     {
@@ -155,7 +155,7 @@ namespace backend.Data
                         Colors = "Đen,Trắng,Xanh",
                         Stock = 60,
                         CategoryId = non.Id,
-                        ImageUrl = "non_adidas.jpg"
+                        ImageUrl = "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=914&q=80"
                     }
                 };
 
