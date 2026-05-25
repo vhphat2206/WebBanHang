@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using backend.Data;
 using backend.Services;
@@ -72,6 +73,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 app.UseStaticFiles();
+
+// Phục vụ luôn frontend từ folder ../frontend → 1 lệnh dotnet run là chạy cả web
+// Truy cập: http://localhost:5083/ → index.html
+var frontendPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "frontend"));
+if (Directory.Exists(frontendPath))
+{
+    app.UseDefaultFiles(new DefaultFilesOptions
+    {
+        FileProvider = new PhysicalFileProvider(frontendPath),
+        DefaultFileNames = new List<string> { "index.html" }
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(frontendPath)
+    });
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

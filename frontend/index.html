@@ -512,7 +512,7 @@
             ['#713F12', '#F59E0B'],
         ];
 
-        const API_HOST = 'http://localhost:5083';
+        const API_HOST = window.location.origin;
 
         // Buy the 4 lookbook shirts cùng lúc + redirect checkout
         async function buyLookbookSet(btn) {
@@ -675,7 +675,7 @@
             renderSkeletons('collectionGrid', 4);
 
             try {
-                const res = await fetch('http://localhost:5083/api/Products/search');
+                const res = await fetch(API_HOST + '/api/Products/search');
                 allProducts = await res.json();
                 renderSections();
             } catch (err) {
@@ -736,7 +736,7 @@
             document.getElementById('newinGrid').innerHTML = '';
             document.getElementById('collectionGrid').innerHTML = '';
             try {
-                const res = await fetch(`http://localhost:5083/api/Products/search?query=${encodeURIComponent(q)}`);
+                const res = await fetch(`${API_HOST}/api/Products/search?query=${encodeURIComponent(q)}`);
                 const results = await res.json();
                 // Hiển thị toàn bộ kết quả trong section BÁN CHẠY, ẩn 2 section còn lại
                 document.querySelector('#bestsellerGrid').previousElementSibling.querySelector('h2').textContent = `Kết quả cho "${q}" (${results.length})`;
@@ -856,7 +856,7 @@
             const errEl = document.getElementById('loginHomeError');
             errEl.classList.add('hidden');
             try {
-                const res = await fetch('http://localhost:5083/api/auth/login', {
+                const res = await fetch(API_HOST + '/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -899,7 +899,7 @@
             }
 
             try {
-                const res = await fetch('http://localhost:5083/api/auth/register', {
+                const res = await fetch(API_HOST + '/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password, fullName, email })

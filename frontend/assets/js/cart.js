@@ -15,7 +15,9 @@
  */
 (function () {
     const STORAGE_KEY = 'adlv_cart';
-    const API_HOST = 'http://localhost:5083';
+    // API host = origin của trang hiện tại (cùng domain với backend)
+    // Local: http://localhost:5083 — Deploy: https://your-domain.com
+    const API_HOST = window.location.origin;
 
     const listeners = { change: [] };
 

@@ -401,8 +401,8 @@
 <div id="toast" class="hidden fixed bottom-6 right-6 z-[100] bg-black text-white px-6 py-4 rounded-lg shadow-2xl font-semibold"></div>
 
 <script>
-    const API = 'http://localhost:5083/api';
-    const HOST = 'http://localhost:5083';
+    const API = window.location.origin + '/api';
+    const HOST = window.location.origin;
     let token = localStorage.getItem('admin_token');
     let currentUser = JSON.parse(localStorage.getItem('admin_user') || 'null');
     let products = [];

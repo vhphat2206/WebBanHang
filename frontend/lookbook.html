@@ -97,7 +97,7 @@
     </footer>
 
     <script>
-        const API_HOST = 'http://localhost:5083';
+        const API_HOST = window.location.origin;
         function fullImageUrl(u) {
             if (!u) return null;
             if (u.startsWith('http')) return u;
