@@ -394,8 +394,18 @@
                 return;
             }
             appliedVoucher = v;
-            msg.textContent = `✓ Đã áp dụng ${v.code}: ${v.description}`;
-            msg.classList.add('text-emerald-600');
+            msg.innerHTML = `<span class="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded">
+                <span>✓ Đã áp dụng <b>${v.code}</b></span>
+                <button type="button" onclick="removeVoucher()" class="text-emerald-700 hover:text-red-600 font-bold text-base leading-none" title="Hủy voucher">×</button>
+            </span>`;
+            msg.classList.add('text-emerald-700');
+            updateSummary();
+        }
+
+        function removeVoucher() {
+            appliedVoucher = null;
+            document.getElementById('voucherInput').value = '';
+            document.getElementById('voucherMsg').classList.add('hidden');
             updateSummary();
         }
 
