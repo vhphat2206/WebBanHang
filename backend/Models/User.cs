@@ -37,5 +37,17 @@ namespace backend.Models
         public string AvatarUrl { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public bool IsLocked { get; set; } = false;
+
+        public bool EmailVerified { get; set; } = false;
+
+        [StringLength(100)]
+        public string? ResetToken { get; set; }
+
+        public DateTime? ResetTokenExpiry { get; set; }
+
+        [StringLength(100)]
+        public string? EmailVerifyToken { get; set; }
     }
 }

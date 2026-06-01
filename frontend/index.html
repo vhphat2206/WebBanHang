@@ -218,6 +218,13 @@
                     <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mật khẩu</label>
                     <input type="password" id="loginHomePass" required autocomplete="current-password" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none"/>
                 </div>
+                <div class="flex items-center justify-between text-sm">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="loginRememberMe" class="w-4 h-4 accent-red-600"/>
+                        <span class="text-gray-600">Ghi nhớ đăng nhập</span>
+                    </label>
+                    <a href="forgot-password.html" class="text-red-600 hover:underline font-semibold">Quên mật khẩu?</a>
+                </div>
                 <div id="loginHomeError" class="text-sm text-red-600 hidden"></div>
                 <button type="submit" class="w-full bg-black text-white font-bold uppercase py-3 rounded-lg hover:bg-red-600 transition">Đăng nhập</button>
             </form>
@@ -854,13 +861,14 @@
             e.preventDefault();
             const username = document.getElementById('loginHomeUser').value;
             const password = document.getElementById('loginHomePass').value;
+            const rememberMe = document.getElementById('loginRememberMe').checked;
             const errEl = document.getElementById('loginHomeError');
             errEl.classList.add('hidden');
             try {
                 const res = await fetch(API_HOST + '/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, rememberMe })
                 });
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({ message: 'Sai tài khoản hoặc mật khẩu' }));

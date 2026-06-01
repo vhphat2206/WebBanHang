@@ -90,6 +90,10 @@
                     <span class="flex-1 text-left">Đơn hàng</span>
                     <span id="ordersPendingBadge" class="hidden bg-red-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">0</span>
                 </button>
+                <button class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-700" data-view="users">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    Người dùng
+                </button>
                 <a href="index.html" target="_blank" class="nav-link w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-gray-700">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     Xem store
@@ -195,6 +199,39 @@
                     <button onclick="openCategoryModal()" class="bg-black text-white font-bold uppercase text-sm px-6 py-3 rounded-lg hover:bg-red-600 transition">+ Thêm danh mục</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="categoryGrid"></div>
+            </div>
+
+            <!-- USERS VIEW -->
+            <div id="usersView" class="hidden">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 class="text-3xl font-black">Người dùng</h1>
+                        <p class="text-gray-500 text-sm mt-1" id="usersCount">Đang tải...</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="userSearch" placeholder="Tìm theo username, email, tên..."
+                            class="px-4 py-2 border border-gray-200 rounded-lg text-sm w-72"/>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr class="text-xs uppercase tracking-wider text-gray-500 font-bold">
+                                    <th class="text-left px-6 py-4">Avatar</th>
+                                    <th class="text-left px-6 py-4">Username</th>
+                                    <th class="text-left px-6 py-4">Họ tên / Email</th>
+                                    <th class="text-left px-6 py-4">SĐT</th>
+                                    <th class="text-center px-6 py-4">Đơn / Chi tiêu</th>
+                                    <th class="text-center px-6 py-4">Role</th>
+                                    <th class="text-center px-6 py-4">Trạng thái</th>
+                                    <th class="text-right px-6 py-4">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="divide-y divide-gray-100"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -498,9 +535,121 @@
             document.getElementById('productsView').classList.toggle('hidden', view !== 'products');
             document.getElementById('categoriesView').classList.toggle('hidden', view !== 'categories');
             document.getElementById('ordersView').classList.toggle('hidden', view !== 'orders');
+            document.getElementById('usersView').classList.toggle('hidden', view !== 'users');
             if (view === 'categories') renderCategories();
             if (view === 'orders') loadOrders();
+            if (view === 'users') loadUsers();
         });
+    });
+
+    // ===== USERS =====
+    let usersData = [];
+    async function loadUsers(search = '') {
+        try {
+            const q = search ? `?search=${encodeURIComponent(search)}` : '';
+            usersData = await api('/users' + q);
+            document.getElementById('usersCount').textContent = `${usersData.length} người dùng`;
+            renderUsers();
+        } catch (err) {
+            showToast('Lỗi: ' + err.message, true);
+        }
+    }
+
+    function renderUsers() {
+        const tbody = document.getElementById('usersTableBody');
+        if (!usersData.length) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-gray-400">Không có người dùng</td></tr>';
+            return;
+        }
+        tbody.innerHTML = usersData.map(u => {
+            const initial = (u.fullName || u.username).charAt(0).toUpperCase();
+            const avatar = u.avatarUrl
+                ? `<img src="${u.avatarUrl.startsWith('http') ? u.avatarUrl : (window.location.origin + u.avatarUrl)}" class="w-10 h-10 rounded-full object-cover"/>`
+                : `<div class="w-10 h-10 bg-gradient-to-br from-gray-600 to-black rounded-full flex items-center justify-center text-white font-bold text-sm">${initial}</div>`;
+            const roleBadge = u.role === 'Admin'
+                ? '<span class="text-[10px] bg-purple-100 text-purple-700 font-bold px-2 py-1 rounded uppercase">Admin</span>'
+                : '<span class="text-[10px] bg-gray-100 text-gray-700 font-bold px-2 py-1 rounded uppercase">Customer</span>';
+            const statusBadge = u.isLocked
+                ? '<span class="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-1 rounded uppercase">🔒 Khóa</span>'
+                : '<span class="text-[10px] bg-green-100 text-green-700 font-bold px-2 py-1 rounded uppercase">✓ Hoạt động</span>';
+            const emailVerify = u.emailVerified
+                ? '<span class="text-[9px] text-green-600">✓ Verified</span>'
+                : '<span class="text-[9px] text-amber-600">⚠ Chưa xác thực</span>';
+
+            const isSelf = currentUser && currentUser.id === u.id;
+            const lockBtn = u.role === 'Admin' || isSelf
+                ? ''
+                : (u.isLocked
+                    ? `<button onclick="unlockUser(${u.id})" class="text-xs font-semibold text-green-600 hover:underline">Mở khóa</button>`
+                    : `<button onclick="lockUser(${u.id})" class="text-xs font-semibold text-red-600 hover:underline">Khóa</button>`);
+            const roleBtn = isSelf ? '' :
+                `<button onclick="toggleRole(${u.id}, '${u.role}')" class="text-xs font-semibold text-blue-600 hover:underline ml-3">
+                    ${u.role === 'Admin' ? '→ Customer' : '→ Admin'}
+                </button>`;
+
+            return `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">${avatar}</td>
+                    <td class="px-6 py-4">
+                        <div class="font-mono font-bold text-sm">${u.username}</div>
+                        <div class="text-[10px] text-gray-400">ID #${u.id}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="font-semibold text-sm">${u.fullName || '—'}</div>
+                        <div class="text-xs text-gray-500">${u.email || '—'}</div>
+                        <div class="mt-0.5">${emailVerify}</div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${u.phone || '—'}</td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="font-bold text-sm">${u.orderCount} đơn</div>
+                        <div class="text-xs text-gray-500">${Math.round(u.totalSpent).toLocaleString('vi-VN')}₫</div>
+                    </td>
+                    <td class="px-6 py-4 text-center">${roleBadge}</td>
+                    <td class="px-6 py-4 text-center">${statusBadge}</td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap">${lockBtn}${roleBtn}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function lockUser(id) {
+        const u = usersData.find(x => x.id === id);
+        if (!confirm(`Khóa tài khoản "${u.username}"?\nUser sẽ không đăng nhập được cho đến khi mở khóa.`)) return;
+        try {
+            await api(`/users/${id}/lock`, { method: 'PUT' });
+            showToast('Đã khóa tài khoản');
+            loadUsers(document.getElementById('userSearch').value);
+        } catch (err) { showToast('Lỗi: ' + err.message, true); }
+    }
+
+    async function unlockUser(id) {
+        try {
+            await api(`/users/${id}/unlock`, { method: 'PUT' });
+            showToast('Đã mở khóa tài khoản');
+            loadUsers(document.getElementById('userSearch').value);
+        } catch (err) { showToast('Lỗi: ' + err.message, true); }
+    }
+
+    async function toggleRole(id, currentRole) {
+        const newRole = currentRole === 'Admin' ? 'Customer' : 'Admin';
+        const u = usersData.find(x => x.id === id);
+        if (!confirm(`Đổi role của "${u.username}" từ ${currentRole} → ${newRole}?`)) return;
+        try {
+            await api(`/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role: newRole }) });
+            showToast('Đã cập nhật role');
+            loadUsers(document.getElementById('userSearch').value);
+        } catch (err) { showToast('Lỗi: ' + err.message, true); }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const searchEl = document.getElementById('userSearch');
+        if (searchEl) {
+            let timer;
+            searchEl.addEventListener('input', () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => loadUsers(searchEl.value), 300);
+            });
+        }
     });
 
     // ===== PRODUCTS =====

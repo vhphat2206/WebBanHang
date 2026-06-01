@@ -15,12 +15,12 @@ namespace backend.Services
             _config = config;
         }
 
-        public string GenerateToken(User user)
+        public string GenerateToken(User user, bool rememberMe = false)
         {
             var key = _config["Jwt:Key"] ?? throw new InvalidOperationException("Missing Jwt:Key");
             var issuer = _config["Jwt:Issuer"];
             var audience = _config["Jwt:Audience"];
-            var hours = int.Parse(_config["Jwt:ExpirationHours"] ?? "24");
+            var hours = rememberMe ? 24 * 30 : int.Parse(_config["Jwt:ExpirationHours"] ?? "24");
 
             var claims = new List<Claim>
             {

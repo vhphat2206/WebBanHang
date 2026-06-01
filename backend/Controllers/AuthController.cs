@@ -25,10 +25,13 @@ namespace backend.Controllers
             _jwt = jwt;
         }
 
-        public record LoginDto(string Username, string Password);
+        public record LoginDto(string Username, string Password, bool RememberMe = false);
         public record RegisterDto(string Username, string Password, string FullName, string Email);
         public record UpdateProfileDto(string FullName, string Email, string? Phone, string? Gender, DateTime? DateOfBirth, string? Address, string? AvatarUrl);
         public record ChangePasswordDto(string OldPassword, string NewPassword);
+        public record ForgotPasswordDto(string Email);
+        public record ResetPasswordDto(string Token, string NewPassword);
+        public record VerifyEmailDto(string Token);
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
@@ -39,11 +42,17 @@ namespace backend.Controllers
                 return Unauthorized(new { message = "Sai tài khoản hoặc mật khẩu" });
             }
 
-            var token = _jwt.GenerateToken(user);
+            if (user.IsLocked)
+            {
+                return Unauthorized(new { message = "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên." });
+            }
+
+            var token = _jwt.GenerateToken(user, dto.RememberMe);
             return Ok(new
             {
                 token,
-                user = new { user.Id, user.Username, user.FullName, user.Email, user.Role }
+                rememberMe = dto.RememberMe,
+                user = new { user.Id, user.Username, user.FullName, user.Email, user.Role, user.EmailVerified, user.AvatarUrl }
             });
         }
 
@@ -54,14 +63,21 @@ namespace backend.Controllers
             {
                 return BadRequest(new { message = "Tên đăng nhập đã tồn tại" });
             }
+            if (!string.IsNullOrWhiteSpace(dto.Email) && await _context.Users.AnyAsync(u => u.Email == dto.Email))
+            {
+                return BadRequest(new { message = "Email đã được sử dụng" });
+            }
 
+            var verifyToken = Guid.NewGuid().ToString("N");
             var user = new User
             {
                 Username = dto.Username,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 FullName = dto.FullName,
                 Email = dto.Email,
-                Role = "Customer"
+                Role = "Customer",
+                EmailVerifyToken = verifyToken,
+                EmailVerified = false
             };
 
             _context.Users.Add(user);
@@ -71,7 +87,86 @@ namespace backend.Controllers
             return Ok(new
             {
                 token,
-                user = new { user.Id, user.Username, user.FullName, user.Email, user.Role }
+                user = new { user.Id, user.Username, user.FullName, user.Email, user.Role, user.EmailVerified },
+                verifyToken,
+                verifyUrl = $"/verify-email.html?token={verifyToken}",
+                message = "Đăng ký thành công. Vui lòng xác thực email."
+            });
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email))
+                return BadRequest(new { message = "Vui lòng nhập email" });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            if (user == null)
+            {
+                return Ok(new { message = "Nếu email tồn tại, link đặt lại mật khẩu đã được gửi." });
+            }
+
+            user.ResetToken = Guid.NewGuid().ToString("N");
+            user.ResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+            await _context.SaveChangesAsync();
+
+            // Demo không có SMTP — trả link reset ngay trong response để user copy.
+            return Ok(new
+            {
+                message = "Link đặt lại mật khẩu đã được tạo. Có hiệu lực 1 giờ.",
+                resetToken = user.ResetToken,
+                resetUrl = $"/reset-password.html?token={user.ResetToken}"
+            });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 6)
+                return BadRequest(new { message = "Mật khẩu mới phải có ít nhất 6 ký tự" });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.ResetToken == dto.Token);
+            if (user == null || user.ResetTokenExpiry == null || user.ResetTokenExpiry < DateTime.UtcNow)
+                return BadRequest(new { message = "Token không hợp lệ hoặc đã hết hạn" });
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            user.ResetToken = null;
+            user.ResetTokenExpiry = null;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại." });
+        }
+
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Token))
+                return BadRequest(new { message = "Token không hợp lệ" });
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailVerifyToken == dto.Token);
+            if (user == null)
+                return BadRequest(new { message = "Token không hợp lệ hoặc đã được sử dụng" });
+
+            user.EmailVerified = true;
+            user.EmailVerifyToken = null;
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Xác thực email thành công!", user = new { user.Id, user.Username, user.Email } });
+        }
+
+        [HttpPost("resend-verify")]
+        [Authorize]
+        public async Task<IActionResult> ResendVerify()
+        {
+            var user = await _context.Users.FindAsync(CurrentUserId);
+            if (user == null) return NotFound();
+            if (user.EmailVerified) return BadRequest(new { message = "Email đã được xác thực" });
+
+            user.EmailVerifyToken = Guid.NewGuid().ToString("N");
+            await _context.SaveChangesAsync();
+            return Ok(new
+            {
+                message = "Đã tạo lại link xác thực.",
+                verifyToken = user.EmailVerifyToken,
+                verifyUrl = $"/verify-email.html?token={user.EmailVerifyToken}"
             });
         }
 
@@ -85,7 +180,7 @@ namespace backend.Controllers
             {
                 user.Id, user.Username, user.FullName, user.Email, user.Role,
                 user.Phone, user.Gender, user.DateOfBirth, user.Address, user.AvatarUrl,
-                user.CreatedAt
+                user.CreatedAt, user.EmailVerified, user.IsLocked
             });
         }
 

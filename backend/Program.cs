@@ -59,6 +59,24 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.EnsureCreated();
+
+    // ALTER TABLE để thêm columns mới cho DB đã exist (không mất data)
+    var conn = db.Database.GetDbConnection();
+    await conn.OpenAsync();
+    foreach (var sql in new[]
+    {
+        "ALTER TABLE Users ADD COLUMN IsLocked INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE Users ADD COLUMN EmailVerified INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE Users ADD COLUMN ResetToken TEXT NULL",
+        "ALTER TABLE Users ADD COLUMN ResetTokenExpiry TEXT NULL",
+        "ALTER TABLE Users ADD COLUMN EmailVerifyToken TEXT NULL"
+    })
+    {
+        try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
+        catch { /* column đã tồn tại — bỏ qua */ }
+    }
+    await conn.CloseAsync();
+
     await SeedData.InitializeAsync(db);
 }
 
