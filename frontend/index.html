@@ -502,13 +502,6 @@
         <div class="border-t border-white/10 py-4 text-center text-xs text-gray-500">© 2026 ADLV STORE. All rights reserved.</div>
     </footer>
 
-    <!-- FLOATING CONTACT -->
-    <div class="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
-        <button class="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:scale-110 transition flex items-center justify-center" title="Messenger">💬</button>
-        <button class="w-12 h-12 bg-sky-500 text-white rounded-full shadow-lg hover:scale-110 transition flex items-center justify-center" title="Zalo">Z</button>
-        <button class="w-12 h-12 bg-green-500 text-white rounded-full shadow-lg hover:scale-110 transition flex items-center justify-center" title="Hotline">📞</button>
-    </div>
-
     <script>
         const GRADIENTS = [
             ['#1F2937', '#374151'],
@@ -840,7 +833,17 @@
 
                         const displayName = u.fullName || u.username || 'User';
                         const initial = displayName.charAt(0).toUpperCase();
-                        document.getElementById('userAvatar').textContent = initial;
+                        const avatarEl = document.getElementById('userAvatar');
+                        const avatarUrl = u.avatarUrl
+                            ? (u.avatarUrl.startsWith('http') ? u.avatarUrl : window.location.origin + u.avatarUrl)
+                            : null;
+                        if (avatarUrl) {
+                            avatarEl.innerHTML = `<img src="${avatarUrl}" alt="" class="w-full h-full object-cover rounded-full"/>`;
+                            avatarEl.classList.remove('bg-black');
+                        } else {
+                            avatarEl.textContent = initial;
+                            avatarEl.classList.add('bg-black');
+                        }
                         document.getElementById('userDisplayName').textContent = displayName;
                         document.getElementById('dropdownName').textContent = displayName;
                         document.getElementById('dropdownEmail').textContent = u.email || '—';
