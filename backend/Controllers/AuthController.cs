@@ -101,19 +101,20 @@ namespace backend.Controllers
                 return BadRequest(new { message = "Vui lòng nhập email" });
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            // Demo trả lỗi rõ ràng nếu email không tồn tại để UX dễ debug.
+            // Production nên trả OK generic để tránh leak email enumeration.
             if (user == null)
             {
-                return Ok(new { message = "Nếu email tồn tại, link đặt lại mật khẩu đã được gửi." });
+                return NotFound(new { message = "Email này chưa được đăng ký trong hệ thống" });
             }
 
             user.ResetToken = Guid.NewGuid().ToString("N");
             user.ResetTokenExpiry = DateTime.UtcNow.AddHours(1);
             await _context.SaveChangesAsync();
 
-            // Demo không có SMTP — trả link reset ngay trong response để user copy.
             return Ok(new
             {
-                message = "Link đặt lại mật khẩu đã được tạo. Có hiệu lực 1 giờ.",
+                message = $"Link đặt lại mật khẩu đã được tạo cho {user.Username}. Có hiệu lực 1 giờ.",
                 resetToken = user.ResetToken,
                 resetUrl = $"/reset-password.html?token={user.ResetToken}"
             });
