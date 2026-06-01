@@ -57,6 +57,10 @@
                 <input type="password" id="loginPass" required value="admin123"
                     class="w-full px-4 py-3 border border-gray-200 rounded-lg" placeholder="••••••••"/>
             </div>
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input type="checkbox" id="adminRememberMe" class="w-4 h-4 accent-red-600"/>
+                <span class="text-gray-700">Ghi nhớ đăng nhập</span>
+            </label>
             <div id="loginError" class="text-sm text-red-600 hidden"></div>
             <button type="submit" class="w-full bg-black text-white font-bold uppercase py-3 rounded-lg hover:bg-red-600 transition">Đăng nhập</button>
         </form>
@@ -484,14 +488,27 @@
     }
 
     // ===== AUTH =====
+    // Auto-fill saved credentials nếu đã tick Remember Me lần trước
+    (function autofillLogin() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('adlv_remember') || 'null');
+            if (saved && saved.username) {
+                document.getElementById('loginUser').value = saved.username;
+                if (saved.password) document.getElementById('loginPass').value = atob(saved.password);
+                document.getElementById('adminRememberMe').checked = true;
+            }
+        } catch {}
+    })();
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const username = document.getElementById('loginUser').value;
         const password = document.getElementById('loginPass').value;
+        const rememberMe = document.getElementById('adminRememberMe').checked;
         const errEl = document.getElementById('loginError');
         errEl.classList.add('hidden');
         try {
-            const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
+            const data = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password, rememberMe }) });
             if (data.user.role !== 'Admin') {
                 errEl.textContent = 'Tài khoản này không có quyền Admin';
                 errEl.classList.remove('hidden');
@@ -499,6 +516,11 @@
             }
             localStorage.setItem('admin_token', data.token);
             localStorage.setItem('admin_user', JSON.stringify(data.user));
+            if (rememberMe) {
+                localStorage.setItem('adlv_remember', JSON.stringify({ username, password: btoa(password) }));
+            } else {
+                localStorage.removeItem('adlv_remember');
+            }
             token = data.token;
             currentUser = data.user;
             initApp();
