@@ -31,20 +31,21 @@ namespace backend.Controllers
                     u.FullName.ToLower().Contains(s));
             }
 
-            // Load users + orders 2 queries riêng, gộp memory cho SQLite ổn định
+            // Load users + tất cả orders trong memory rồi compute (SQLite-friendly)
             var users = await query.OrderByDescending(u => u.CreatedAt).ToListAsync();
-            var userIds = users.Select(u => u.Id).ToList();
-            var orderStats = await _context.Orders
+            var userIds = users.Select(u => u.Id).ToHashSet();
+            var orders = await _context.Orders
                 .Where(o => userIds.Contains(o.UserId))
+                .Select(o => new { o.UserId, o.Status, o.Total })
+                .ToListAsync();
+
+            var statsMap = orders
                 .GroupBy(o => o.UserId)
-                .Select(g => new
+                .ToDictionary(g => g.Key, g => new
                 {
-                    UserId = g.Key,
                     OrderCount = g.Count(),
                     TotalSpent = g.Where(o => o.Status != "Cancelled").Sum(o => o.Total)
-                })
-                .ToListAsync();
-            var statsMap = orderStats.ToDictionary(s => s.UserId);
+                });
 
             var result = users.Select(u =>
             {
@@ -62,7 +63,7 @@ namespace backend.Controllers
                     u.AvatarUrl,
                     u.CreatedAt,
                     OrderCount = s?.OrderCount ?? 0,
-                    TotalSpent = s?.TotalSpent ?? 0
+                    TotalSpent = s?.TotalSpent ?? 0m
                 };
             }).ToList();
 
