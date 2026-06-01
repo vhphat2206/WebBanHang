@@ -285,6 +285,11 @@
 
             // Setup avatar upload
             document.getElementById('avatarFile').addEventListener('change', uploadAvatar);
+
+            // Stats
+            loadStats();
+            loadVouchers();
+            loadRecentOrders();
         }
 
         function renderAvatar(u) {
@@ -378,12 +383,6 @@
                     }
                 }
             } catch (err) { alert(err.message); }
-        }
-
-            // Stats
-            loadStats();
-            loadVouchers();
-            loadRecentOrders();
         }
 
         function fillProfile(u) {
