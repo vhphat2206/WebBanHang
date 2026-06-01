@@ -2,6 +2,7 @@
 (function () {
     const API_HOST = window.location.origin;
     const STORAGE_KEY = 'adlv_chat_history';
+    const POS_KEY = 'adlv_chat_btn_pos';
 
     let isOpen = false;
     let productsCache = null;
@@ -27,7 +28,8 @@
 
     function injectStyles() {
         const css = `
-        #adlv-chat-btn { position: fixed; bottom: 24px; right: 24px; z-index: 9998; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #DC2626, #991B1B); color: white; border: none; cursor: pointer; box-shadow: 0 10px 30px rgba(220,38,38,.4); display: flex; align-items: center; justify-content: center; transition: transform .2s; }
+        #adlv-chat-btn { position: fixed; bottom: 24px; right: 24px; z-index: 9998; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #DC2626, #991B1B); color: white; border: none; cursor: grab; box-shadow: 0 10px 30px rgba(220,38,38,.4); display: flex; align-items: center; justify-content: center; transition: transform .2s; user-select: none; touch-action: none; -webkit-user-select: none; }
+        #adlv-chat-btn:active { cursor: grabbing; }
         #adlv-chat-btn:hover { transform: scale(1.08); }
         #adlv-chat-btn .pulse { position: absolute; inset: 0; border-radius: 50%; background: #DC2626; animation: adlv-pulse 2s infinite; opacity: .4; z-index: -1; }
         @keyframes adlv-pulse { 0%{transform:scale(1);opacity:.5} 100%{transform:scale(1.5);opacity:0} }
@@ -332,17 +334,120 @@ Hoặc chọn nhanh các nút gợi ý bên dưới ⬇️`
         isOpen = false;
     }
 
+    function clampPos(x, y) {
+        const btnSize = 60;
+        const maxX = window.innerWidth - btnSize - 8;
+        const maxY = window.innerHeight - btnSize - 8;
+        return { x: Math.max(8, Math.min(x, maxX)), y: Math.max(8, Math.min(y, maxY)) };
+    }
+
+    function applyBtnPos(x, y) {
+        const btn = document.getElementById('adlv-chat-btn');
+        const panel = document.getElementById('adlv-chat-panel');
+        const { x: cx, y: cy } = clampPos(x, y);
+        btn.style.left = cx + 'px';
+        btn.style.top = cy + 'px';
+        btn.style.right = 'auto';
+        btn.style.bottom = 'auto';
+
+        // Panel xếp theo vị trí nút: nếu nút ở nửa trên → panel xuống dưới; nửa dưới → panel lên trên
+        const panelW = 380, panelH = 540;
+        let px = cx + 60 - panelW;
+        if (px < 8) px = cx;
+        if (px + panelW > window.innerWidth - 8) px = window.innerWidth - panelW - 8;
+
+        let py;
+        if (cy > window.innerHeight / 2) py = cy - panelH - 8;
+        else py = cy + 60 + 8;
+        py = Math.max(8, Math.min(py, window.innerHeight - panelH - 8));
+
+        panel.style.left = px + 'px';
+        panel.style.top = py + 'px';
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+    }
+
+    function loadBtnPos() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+            if (saved && typeof saved.x === 'number') {
+                applyBtnPos(saved.x, saved.y);
+                return true;
+            }
+        } catch {}
+        return false;
+    }
+
+    function makeDraggable() {
+        const btn = document.getElementById('adlv-chat-btn');
+        let startX = 0, startY = 0, origX = 0, origY = 0, moved = false, dragging = false;
+
+        const getPoint = (e) => {
+            const t = e.touches ? e.touches[0] : e;
+            return { x: t.clientX, y: t.clientY };
+        };
+
+        const onDown = (e) => {
+            dragging = true;
+            moved = false;
+            const p = getPoint(e);
+            startX = p.x;
+            startY = p.y;
+            const rect = btn.getBoundingClientRect();
+            origX = rect.left;
+            origY = rect.top;
+            btn.style.transition = 'none';
+            if (e.cancelable) e.preventDefault();
+        };
+
+        const onMove = (e) => {
+            if (!dragging) return;
+            const p = getPoint(e);
+            const dx = p.x - startX;
+            const dy = p.y - startY;
+            if (!moved && Math.hypot(dx, dy) > 5) moved = true;
+            if (moved) applyBtnPos(origX + dx, origY + dy);
+        };
+
+        const onUp = () => {
+            if (!dragging) return;
+            dragging = false;
+            btn.style.transition = '';
+            if (moved) {
+                const rect = btn.getBoundingClientRect();
+                try { localStorage.setItem(POS_KEY, JSON.stringify({ x: rect.left, y: rect.top })); } catch {}
+            } else {
+                isOpen ? closeChat() : openChat();
+            }
+        };
+
+        btn.addEventListener('mousedown', onDown);
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        btn.addEventListener('touchstart', onDown, { passive: false });
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onUp);
+    }
+
     function init() {
         if (document.getElementById('adlv-chat-btn')) return;
         injectStyles();
         injectHTML();
-        document.getElementById('adlv-chat-btn').onclick = () => isOpen ? closeChat() : openChat();
+        loadBtnPos();
+        makeDraggable();
         document.querySelector('#adlv-chat-panel .close').onclick = closeChat;
         document.getElementById('adlv-chat-form').onsubmit = (e) => {
             e.preventDefault();
             const input = document.getElementById('adlv-chat-input');
             handleUserMessage(input.value);
         };
+        window.addEventListener('resize', () => {
+            const btn = document.getElementById('adlv-chat-btn');
+            if (btn.style.left) {
+                const rect = btn.getBoundingClientRect();
+                applyBtnPos(rect.left, rect.top);
+            }
+        });
     }
 
     if (document.readyState === 'loading') {
