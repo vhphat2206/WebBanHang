@@ -15,8 +15,62 @@ namespace backend.Data
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
                     FullName = "Quản trị viên",
                     Email = "admin@adlvstore.local",
-                    Role = "Admin"
+                    Role = "Admin",
+                    EmailVerified = true
                 });
+
+                // Demo customers — không bao giờ mất khi Render redeploy
+                context.Users.AddRange(
+                    new User
+                    {
+                        Username = "elonmusk",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("musk2026"),
+                        FullName = "Elon Musk",
+                        Email = "elon@spacex.com",
+                        Phone = "0901234567",
+                        Gender = "Nam",
+                        Address = "1 Rocket Road, Hawthorne, CA",
+                        Role = "Customer",
+                        EmailVerified = true
+                    },
+                    new User
+                    {
+                        Username = "khachhang1",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("pass1234"),
+                        FullName = "Nguyễn Văn Khách",
+                        Email = "khach1@example.com",
+                        Phone = "0912345678",
+                        Gender = "Nam",
+                        Address = "123 Lê Lợi, Q.1, TP.HCM",
+                        Role = "Customer",
+                        EmailVerified = true
+                    },
+                    new User
+                    {
+                        Username = "khachhang2",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("pass1234"),
+                        FullName = "Trần Thị Bình",
+                        Email = "khach2@example.com",
+                        Phone = "0923456789",
+                        Gender = "Nữ",
+                        Address = "456 Nguyễn Huệ, Q.1, TP.HCM",
+                        Role = "Customer",
+                        EmailVerified = true
+                    },
+                    new User
+                    {
+                        Username = "vipuser",
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("pass1234"),
+                        FullName = "Lê Hoàng VIP",
+                        Email = "vip@example.com",
+                        Phone = "0934567890",
+                        Gender = "Nam",
+                        Address = "789 Đồng Khởi, Q.1, TP.HCM",
+                        Role = "Customer",
+                        EmailVerified = false
+                    }
+                );
+
                 await context.SaveChangesAsync();
             }
 
