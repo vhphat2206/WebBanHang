@@ -31,9 +31,25 @@ namespace backend.Controllers
                     u.FullName.ToLower().Contains(s));
             }
 
-            var users = await query
-                .OrderByDescending(u => u.CreatedAt)
-                .Select(u => new
+            // Load users + orders 2 queries riêng, gộp memory cho SQLite ổn định
+            var users = await query.OrderByDescending(u => u.CreatedAt).ToListAsync();
+            var userIds = users.Select(u => u.Id).ToList();
+            var orderStats = await _context.Orders
+                .Where(o => userIds.Contains(o.UserId))
+                .GroupBy(o => o.UserId)
+                .Select(g => new
+                {
+                    UserId = g.Key,
+                    OrderCount = g.Count(),
+                    TotalSpent = g.Where(o => o.Status != "Cancelled").Sum(o => o.Total)
+                })
+                .ToListAsync();
+            var statsMap = orderStats.ToDictionary(s => s.UserId);
+
+            var result = users.Select(u =>
+            {
+                statsMap.TryGetValue(u.Id, out var s);
+                return new
                 {
                     u.Id,
                     u.Username,
@@ -45,14 +61,12 @@ namespace backend.Controllers
                     u.EmailVerified,
                     u.AvatarUrl,
                     u.CreatedAt,
-                    OrderCount = _context.Orders.Count(o => o.UserId == u.Id),
-                    TotalSpent = _context.Orders
-                        .Where(o => o.UserId == u.Id && o.Status != "Cancelled")
-                        .Sum(o => (decimal?)o.Total) ?? 0
-                })
-                .ToListAsync();
+                    OrderCount = s?.OrderCount ?? 0,
+                    TotalSpent = s?.TotalSpent ?? 0
+                };
+            }).ToList();
 
-            return Ok(users);
+            return Ok(result);
         }
 
         [HttpGet("{id}")]
