@@ -470,37 +470,44 @@
 
     // Auto-thêm nút show/hide cho mọi <input type="password"> trên trang
     function attachPasswordToggles() {
-        const EYE_OPEN = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>';
-        const EYE_OFF = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L14.12 14.12m0 0L21 21m-6.88-6.88L19.5 9.5"/></svg>';
+        const EYE_OFF = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L14.12 14.12m0 0L21 21m-6.88-6.88L19.5 9.5"/></svg>';
+        const EYE_ON = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>';
 
-        document.querySelectorAll('input[type="password"]:not([data-toggle-attached])').forEach(input => {
-            input.setAttribute('data-toggle-attached', '1');
-            const wrapper = document.createElement('div');
-            wrapper.style.position = 'relative';
-            wrapper.style.display = 'block';
-            input.parentNode.insertBefore(wrapper, input);
-            wrapper.appendChild(input);
+        document.querySelectorAll('input[type="password"]:not([data-pwt])').forEach(input => {
+            input.setAttribute('data-pwt', '1');
+            const parent = input.parentElement;
+            if (!parent) return;
+            // Đảm bảo parent positioned để absolute button neo được
+            const curPos = window.getComputedStyle(parent).position;
+            if (curPos === 'static') parent.style.position = 'relative';
             input.style.paddingRight = '40px';
 
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.innerHTML = EYE_OFF;
             btn.setAttribute('aria-label', 'Hiện/ẩn mật khẩu');
-            btn.style.cssText = 'position:absolute;right:10px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#6b7280;cursor:pointer;padding:4px;display:flex;align-items:center;';
+            btn.style.cssText = 'position:absolute;right:12px;background:transparent;border:none;color:#6b7280;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px;z-index:2;';
             btn.onmouseover = () => btn.style.color = '#111';
             btn.onmouseout = () => btn.style.color = '#6b7280';
-            btn.onclick = () => {
+            btn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const showing = input.type === 'text';
                 input.type = showing ? 'password' : 'text';
-                btn.innerHTML = showing ? EYE_OFF : EYE_OPEN;
+                btn.innerHTML = showing ? EYE_OFF : EYE_ON;
             };
-            wrapper.appendChild(btn);
+            parent.appendChild(btn);
+
+            // Sau khi DOM ổn định, align button vertically với input
+            requestAnimationFrame(() => {
+                const inputRect = input.getBoundingClientRect();
+                const parentRect = parent.getBoundingClientRect();
+                btn.style.top = (inputRect.top - parentRect.top + inputRect.height / 2 - 12) + 'px';
+            });
         });
     }
-    // Re-scan khi mở modal Login/Register động
-    const _origObserver = new MutationObserver(() => attachPasswordToggles());
-    if (document.readyState !== 'loading') _origObserver.observe(document.body, { childList: true, subtree: true });
-    else document.addEventListener('DOMContentLoaded', () => _origObserver.observe(document.body, { childList: true, subtree: true }));
+    // Re-attach mỗi 500ms vì modal mở/đóng động (đỡ phụ thuộc MutationObserver)
+    setInterval(attachPasswordToggles, 500);
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', onReady);
