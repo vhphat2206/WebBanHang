@@ -1,6 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using backend.Data;
 using backend.Services;
@@ -58,11 +59,30 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.EnsureCreated();
+
+    // ALTER TABLE để thêm columns mới cho DB đã exist (không mất data)
+    var conn = db.Database.GetDbConnection();
+    await conn.OpenAsync();
+    foreach (var sql in new[]
+    {
+        "ALTER TABLE Users ADD COLUMN IsLocked INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE Users ADD COLUMN EmailVerified INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE Users ADD COLUMN ResetToken TEXT NULL",
+        "ALTER TABLE Users ADD COLUMN ResetTokenExpiry TEXT NULL",
+        "ALTER TABLE Users ADD COLUMN EmailVerifyToken TEXT NULL"
+    })
+    {
+        try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
+        catch { /* column đã tồn tại — bỏ qua */ }
+    }
+    await conn.CloseAsync();
+
     await SeedData.InitializeAsync(db);
 }
 
 var webRoot = app.Environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-Directory.CreateDirectory(Path.Combine(webRoot, "uploads"));
+var uploadsPath = Path.Combine(webRoot, "uploads");
+Directory.CreateDirectory(uploadsPath);
 
 if (app.Environment.IsDevelopment())
 {
@@ -72,6 +92,29 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 app.UseStaticFiles();
+
+// Explicit static handler cho /uploads — Render không có wwwroot mặc định
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
+
+// Phục vụ luôn frontend từ folder ../frontend → 1 lệnh dotnet run là chạy cả web
+// Truy cập: http://localhost:5083/ → index.html
+var frontendPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "frontend"));
+if (Directory.Exists(frontendPath))
+{
+    app.UseDefaultFiles(new DefaultFilesOptions
+    {
+        FileProvider = new PhysicalFileProvider(frontendPath),
+        DefaultFileNames = new List<string> { "index.html" }
+    });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(frontendPath)
+    });
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

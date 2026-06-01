@@ -40,6 +40,7 @@
     </header>
 
     <script src="assets/js/cart.js"></script>
+    <script src="assets/js/chatbot.js"></script>
 
     <main class="max-w-[1400px] mx-auto px-6 py-10">
         <div class="flex items-end justify-between mb-8">
@@ -87,7 +88,7 @@
     </main>
 
     <script>
-        const API_HOST = 'http://localhost:5083';
+        const API_HOST = window.location.origin;
         function fullImageUrl(u) {
             if (!u) return null;
             if (u.startsWith('http')) return u;

@@ -102,6 +102,7 @@
     </header>
 
     <script src="assets/js/cart.js"></script>
+    <script src="assets/js/chatbot.js"></script>
 
     <!-- BREADCRUMB -->
     <div class="max-w-[1400px] mx-auto px-6 pt-6 pb-4">
@@ -147,7 +148,7 @@
     <div id="toast" class="hidden fixed bottom-6 right-6 z-[100] bg-black text-white px-6 py-4 rounded-lg shadow-2xl font-semibold"></div>
 
     <script>
-        const API_HOST = 'http://localhost:5083';
+        const API_HOST = window.location.origin;
         const API = API_HOST + '/api';
 
         function fullImageUrl(url) {

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xác thực email - ADLV Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        @keyframes pop { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+        .pop { animation: pop .5s ease-out; }
+    </style>
+</head>
+<body>
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
+        <a href="index.html" class="inline-block mb-6">
+            <img src="assets/logo-adlv.png" alt="ADLV" class="h-12 mx-auto"/>
+        </a>
+
+        <div id="loading">
+            <div class="inline-block w-12 h-12 border-4 border-gray-200 border-t-red-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-gray-600">Đang xác thực email...</p>
+        </div>
+
+        <div id="success" class="hidden">
+            <div class="text-6xl mb-4 pop">✅</div>
+            <h1 class="text-2xl font-black uppercase mb-2">Xác thực thành công!</h1>
+            <p class="text-gray-600 text-sm mb-6">Tài khoản của bạn đã được xác thực email. Cảm ơn bạn đã đăng ký ADLV Store.</p>
+            <a href="index.html" class="inline-block bg-black text-white font-bold uppercase tracking-widest px-8 py-3 hover:bg-red-600 transition">
+                Vào trang chủ
+            </a>
+        </div>
+
+        <div id="error" class="hidden">
+            <div class="text-6xl mb-4">❌</div>
+            <h1 class="text-2xl font-black uppercase mb-2">Xác thực thất bại</h1>
+            <p class="text-gray-600 text-sm mb-6" id="errMsg">Token không hợp lệ hoặc đã được sử dụng.</p>
+            <a href="index.html" class="inline-block bg-black text-white font-bold uppercase tracking-widest px-8 py-3 hover:bg-red-600 transition">
+                Về trang chủ
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const API_HOST = window.location.origin;
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
+
+        async function verify() {
+            if (!token) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('errMsg').textContent = 'Không tìm thấy token trong URL.';
+                document.getElementById('error').classList.remove('hidden');
+                return;
+            }
+            try {
+                const r = await fetch(API_HOST + '/api/auth/verify-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+                const data = await r.json();
+                document.getElementById('loading').classList.add('hidden');
+                if (!r.ok) {
+                    document.getElementById('errMsg').textContent = data.message || 'Token không hợp lệ.';
+                    document.getElementById('error').classList.remove('hidden');
+                } else {
+                    document.getElementById('success').classList.remove('hidden');
+                }
+            } catch (err) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('errMsg').textContent = 'Lỗi kết nối server.';
+                document.getElementById('error').classList.remove('hidden');
+            }
+        }
+        verify();
+    </script>
+</body>
+</html>

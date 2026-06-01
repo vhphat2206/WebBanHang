@@ -43,6 +43,7 @@
     </header>
 
     <script src="assets/js/cart.js"></script>
+    <script src="assets/js/chatbot.js"></script>
 
     <main class="max-w-[1200px] mx-auto px-6 py-10">
         <h1 class="text-3xl md:text-4xl font-black uppercase tracking-tight mb-2">Tài khoản của tôi</h1>
@@ -120,11 +121,28 @@
                         <h2 class="text-xl font-black mb-6">Thông tin cá nhân</h2>
 
                         <div class="mb-6 p-4 bg-gray-50 rounded-lg flex items-center gap-4">
-                            <div class="w-16 h-16 bg-black text-white rounded-full flex items-center justify-center text-2xl font-black" id="avatar">A</div>
-                            <div>
+                            <div class="relative group">
+                                <div class="w-20 h-20 bg-black text-white rounded-full flex items-center justify-center text-2xl font-black overflow-hidden" id="avatarBox">
+                                    <span id="avatar">A</span>
+                                </div>
+                                <label for="avatarFile" title="Đổi ảnh đại diện"
+                                    class="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                </label>
+                                <input type="file" id="avatarFile" accept="image/*" class="hidden"/>
+                            </div>
+                            <div class="flex-1">
                                 <div class="text-xs uppercase tracking-wider text-gray-500 mb-1">Tên đăng nhập</div>
                                 <div class="font-mono font-bold" id="username">—</div>
-                                <div class="mt-1 inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded" id="roleBadge">—</div>
+                                <div class="mt-1 flex flex-wrap gap-1 items-center">
+                                    <span class="inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded" id="roleBadge">—</span>
+                                    <span class="inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded hidden" id="verifiedBadge">✓ Email đã xác thực</span>
+                                    <button type="button" id="verifyBtn" onclick="resendVerify()"
+                                        class="text-[10px] uppercase font-bold text-amber-600 underline hidden">
+                                        ⚠ Email chưa xác thực — Gửi lại link
+                                    </button>
+                                </div>
+                                <div id="avatarMsg" class="text-xs text-gray-500 mt-2"></div>
                             </div>
                         </div>
 
@@ -216,7 +234,7 @@
     <div id="toast" class="hidden fixed bottom-6 right-6 z-[100] bg-black text-white px-6 py-4 rounded-lg shadow-2xl font-semibold"></div>
 
     <script>
-        const API_HOST = 'http://localhost:5083';
+        const API_HOST = window.location.origin;
         const API = API_HOST + '/api';
         const token = localStorage.getItem('admin_token');
         let user = JSON.parse(localStorage.getItem('admin_user') || 'null');
@@ -250,8 +268,8 @@
         async function init() {
             document.getElementById('appContent').classList.remove('hidden');
             document.getElementById('userGreeting').textContent = `Xin chào, ${user.fullName || user.username}`;
-            document.getElementById('avatar').textContent = (user.fullName || user.username).charAt(0).toUpperCase();
             document.getElementById('username').textContent = user.username;
+            renderAvatar(user);
 
             // Fetch full user info (with new fields)
             try {
@@ -261,12 +279,110 @@
                 Object.assign(user, fullUser);
                 localStorage.setItem('admin_user', JSON.stringify(user));
                 fillProfile(fullUser);
+                renderAvatar(fullUser);
+                renderEmailVerifyStatus(fullUser);
             } catch {}
+
+            // Setup avatar upload
+            document.getElementById('avatarFile').addEventListener('change', uploadAvatar);
 
             // Stats
             loadStats();
             loadVouchers();
             loadRecentOrders();
+        }
+
+        function renderAvatar(u) {
+            const box = document.getElementById('avatarBox');
+            const url = fullImageUrl(u.avatarUrl);
+            if (url) {
+                box.innerHTML = `<img src="${url}" alt="" class="w-full h-full object-cover"/>`;
+            } else {
+                box.innerHTML = `<span id="avatar">${(u.fullName || u.username).charAt(0).toUpperCase()}</span>`;
+            }
+        }
+
+        function renderEmailVerifyStatus(u) {
+            const verifiedBadge = document.getElementById('verifiedBadge');
+            const verifyBtn = document.getElementById('verifyBtn');
+            if (u.emailVerified) {
+                verifiedBadge.className = 'inline-block text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-green-100 text-green-700';
+                verifiedBadge.classList.remove('hidden');
+                verifyBtn.classList.add('hidden');
+            } else {
+                verifiedBadge.classList.add('hidden');
+                verifyBtn.classList.remove('hidden');
+            }
+        }
+
+        async function uploadAvatar(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const msgEl = document.getElementById('avatarMsg');
+
+            if (file.size > 2 * 1024 * 1024) {
+                msgEl.textContent = '❌ Ảnh quá lớn (max 2MB)';
+                msgEl.className = 'text-xs text-red-600 mt-2';
+                return;
+            }
+            msgEl.textContent = 'Đang tải...';
+            msgEl.className = 'text-xs text-gray-500 mt-2';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const r = await fetch(API + '/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.message || 'Upload thất bại');
+
+                const newUrl = data.url || data.imageUrl || data.path;
+                if (!newUrl) throw new Error('Server không trả URL ảnh');
+
+                // Update profile với AvatarUrl mới
+                const updRes = await fetch(API + '/auth/me', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        fullName: user.fullName, email: user.email,
+                        avatarUrl: newUrl
+                    })
+                });
+                if (!updRes.ok) throw new Error('Cập nhật avatar thất bại');
+
+                user.avatarUrl = newUrl;
+                localStorage.setItem('admin_user', JSON.stringify(user));
+                renderAvatar(user);
+                msgEl.textContent = '✅ Đã cập nhật ảnh đại diện';
+                msgEl.className = 'text-xs text-green-600 mt-2';
+            } catch (err) {
+                msgEl.textContent = '❌ ' + err.message;
+                msgEl.className = 'text-xs text-red-600 mt-2';
+            }
+        }
+
+        async function resendVerify() {
+            try {
+                const r = await fetch(API + '/auth/resend-verify', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.message);
+                if (data.verifyUrl) {
+                    const fullUrl = API_HOST + data.verifyUrl;
+                    if (confirm(`Link xác thực:\n${fullUrl}\n\nNhấn OK để mở trang xác thực ngay.`)) {
+                        window.open(fullUrl, '_blank');
+                    }
+                }
+            } catch (err) { alert(err.message); }
         }
 
         function fillProfile(u) {

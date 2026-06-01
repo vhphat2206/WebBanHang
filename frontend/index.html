@@ -182,6 +182,7 @@
     </header>
 
     <script src="assets/js/cart.js"></script>
+    <script src="assets/js/chatbot.js"></script>
 
     <!-- PROMO POPUP — Mua 2 áo tặng 1 gấu -->
     <div id="promoModal" class="hidden fixed inset-0 z-[200] backdrop-blur-md bg-black/75 flex items-center justify-center px-4 py-8 overflow-y-auto" onclick="if(event.target.id==='promoModal') dismissPromo()">
@@ -216,6 +217,13 @@
                 <div>
                     <label class="block text-xs font-bold uppercase text-gray-600 mb-2">Mật khẩu</label>
                     <input type="password" id="loginHomePass" required autocomplete="current-password" class="w-full px-4 py-3 border border-gray-200 rounded-lg focus:border-black outline-none"/>
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="loginRememberMe" class="w-4 h-4 accent-red-600"/>
+                        <span class="text-gray-600">Ghi nhớ đăng nhập</span>
+                    </label>
+                    <a href="forgot-password.html" class="text-red-600 hover:underline font-semibold">Quên mật khẩu?</a>
                 </div>
                 <div id="loginHomeError" class="text-sm text-red-600 hidden"></div>
                 <button type="submit" class="w-full bg-black text-white font-bold uppercase py-3 rounded-lg hover:bg-red-600 transition">Đăng nhập</button>
@@ -494,13 +502,6 @@
         <div class="border-t border-white/10 py-4 text-center text-xs text-gray-500">© 2026 ADLV STORE. All rights reserved.</div>
     </footer>
 
-    <!-- FLOATING CONTACT -->
-    <div class="fixed bottom-6 right-6 flex flex-col gap-3 z-40">
-        <button class="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg hover:scale-110 transition flex items-center justify-center" title="Messenger">💬</button>
-        <button class="w-12 h-12 bg-sky-500 text-white rounded-full shadow-lg hover:scale-110 transition flex items-center justify-center" title="Zalo">Z</button>
-        <button class="w-12 h-12 bg-green-500 text-white rounded-full shadow-lg hover:scale-110 transition flex items-center justify-center" title="Hotline">📞</button>
-    </div>
-
     <script>
         const GRADIENTS = [
             ['#1F2937', '#374151'],
@@ -512,7 +513,7 @@
             ['#713F12', '#F59E0B'],
         ];
 
-        const API_HOST = 'http://localhost:5083';
+        const API_HOST = window.location.origin;
 
         // Buy the 4 lookbook shirts cùng lúc + redirect checkout
         async function buyLookbookSet(btn) {
@@ -675,7 +676,7 @@
             renderSkeletons('collectionGrid', 4);
 
             try {
-                const res = await fetch('http://localhost:5083/api/Products/search');
+                const res = await fetch(API_HOST + '/api/Products/search');
                 allProducts = await res.json();
                 renderSections();
             } catch (err) {
@@ -736,7 +737,7 @@
             document.getElementById('newinGrid').innerHTML = '';
             document.getElementById('collectionGrid').innerHTML = '';
             try {
-                const res = await fetch(`http://localhost:5083/api/Products/search?query=${encodeURIComponent(q)}`);
+                const res = await fetch(`${API_HOST}/api/Products/search?query=${encodeURIComponent(q)}`);
                 const results = await res.json();
                 // Hiển thị toàn bộ kết quả trong section BÁN CHẠY, ẩn 2 section còn lại
                 document.querySelector('#bestsellerGrid').previousElementSibling.querySelector('h2').textContent = `Kết quả cho "${q}" (${results.length})`;
@@ -774,6 +775,17 @@
         function openLoginModal() {
             document.getElementById('registerModal').classList.add('hidden');
             document.getElementById('loginModal').classList.remove('hidden');
+            // Auto-fill saved credentials nếu user đã tick "Ghi nhớ đăng nhập" lần trước
+            try {
+                const saved = JSON.parse(localStorage.getItem('adlv_remember') || 'null');
+                if (saved && saved.username) {
+                    document.getElementById('loginHomeUser').value = saved.username;
+                    if (saved.password) {
+                        document.getElementById('loginHomePass').value = atob(saved.password);
+                    }
+                    document.getElementById('loginRememberMe').checked = true;
+                }
+            } catch {}
             setTimeout(() => document.getElementById('loginHomeUser').focus(), 50);
         }
         function openRegisterModal() {
@@ -794,11 +806,12 @@
             }
         });
 
-        function logout() {
+        function logout(clearRemember = false) {
             localStorage.removeItem('admin_token');
             localStorage.removeItem('admin_user');
+            if (clearRemember) localStorage.removeItem('adlv_remember');
             refreshAuthUI();
-            showToast('Đã đăng xuất');
+            showToast(clearRemember ? 'Đã đăng xuất và xóa thông tin đăng nhập' : 'Đã đăng xuất');
         }
 
         function refreshAuthUI() {
@@ -820,7 +833,17 @@
 
                         const displayName = u.fullName || u.username || 'User';
                         const initial = displayName.charAt(0).toUpperCase();
-                        document.getElementById('userAvatar').textContent = initial;
+                        const avatarEl = document.getElementById('userAvatar');
+                        const avatarUrl = u.avatarUrl
+                            ? (u.avatarUrl.startsWith('http') ? u.avatarUrl : window.location.origin + u.avatarUrl)
+                            : null;
+                        if (avatarUrl) {
+                            avatarEl.innerHTML = `<img src="${avatarUrl}" alt="" class="w-full h-full object-cover rounded-full"/>`;
+                            avatarEl.classList.remove('bg-black');
+                        } else {
+                            avatarEl.textContent = initial;
+                            avatarEl.classList.add('bg-black');
+                        }
                         document.getElementById('userDisplayName').textContent = displayName;
                         document.getElementById('dropdownName').textContent = displayName;
                         document.getElementById('dropdownEmail').textContent = u.email || '—';
@@ -853,13 +876,14 @@
             e.preventDefault();
             const username = document.getElementById('loginHomeUser').value;
             const password = document.getElementById('loginHomePass').value;
+            const rememberMe = document.getElementById('loginRememberMe').checked;
             const errEl = document.getElementById('loginHomeError');
             errEl.classList.add('hidden');
             try {
-                const res = await fetch('http://localhost:5083/api/auth/login', {
+                const res = await fetch(API_HOST + '/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, rememberMe })
                 });
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({ message: 'Sai tài khoản hoặc mật khẩu' }));
@@ -868,6 +892,16 @@
                 const data = await res.json();
                 localStorage.setItem('admin_token', data.token);
                 localStorage.setItem('admin_user', JSON.stringify(data.user));
+
+                // Lưu hoặc xóa credentials theo Remember Me
+                if (rememberMe) {
+                    localStorage.setItem('adlv_remember', JSON.stringify({
+                        username, password: btoa(password)
+                    }));
+                } else {
+                    localStorage.removeItem('adlv_remember');
+                }
+
                 if (data.user.role === 'Admin') {
                     window.location.href = 'admin.html';
                 } else {
@@ -899,7 +933,7 @@
             }
 
             try {
-                const res = await fetch('http://localhost:5083/api/auth/register', {
+                const res = await fetch(API_HOST + '/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password, fullName, email })

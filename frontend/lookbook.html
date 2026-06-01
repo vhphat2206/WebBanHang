@@ -40,6 +40,7 @@
     </header>
 
     <script src="assets/js/cart.js"></script>
+    <script src="assets/js/chatbot.js"></script>
 
     <!-- HERO -->
     <section class="max-w-[1400px] mx-auto px-6 pt-16 md:pt-24 pb-12 text-center fade-up">
@@ -97,7 +98,7 @@
     </footer>
 
     <script>
-        const API_HOST = 'http://localhost:5083';
+        const API_HOST = window.location.origin;
         function fullImageUrl(u) {
             if (!u) return null;
             if (u.startsWith('http')) return u;
