@@ -81,7 +81,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 var webRoot = app.Environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-Directory.CreateDirectory(Path.Combine(webRoot, "uploads"));
+var uploadsPath = Path.Combine(webRoot, "uploads");
+Directory.CreateDirectory(uploadsPath);
 
 if (app.Environment.IsDevelopment())
 {
@@ -91,6 +92,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 app.UseStaticFiles();
+
+// Explicit static handler cho /uploads — Render không có wwwroot mặc định
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(uploadsPath),
+    RequestPath = "/uploads"
+});
 
 // Phục vụ luôn frontend từ folder ../frontend → 1 lệnh dotnet run là chạy cả web
 // Truy cập: http://localhost:5083/ → index.html
