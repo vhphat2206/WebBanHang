@@ -176,6 +176,7 @@ namespace backend.Controllers
         {
             var user = await _context.Users.FindAsync(CurrentUserId);
             if (user == null) return NotFound();
+            if (user.IsLocked) return Unauthorized(new { message = "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên." });
             return Ok(new
             {
                 user.Id, user.Username, user.FullName, user.Email, user.Role,
