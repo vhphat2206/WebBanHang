@@ -187,26 +187,6 @@ namespace backend.Controllers
             return Ok(new { message = "Xác thực email thành công!", user = new { user.Id, user.Username, user.Email } });
         }
 
-        [HttpPost("debug-email")]
-        public async Task<IActionResult> DebugEmail([FromBody] DebugEmailDto dto)
-        {
-            var ok = await _email.SendAsync(dto.To, "ADLV Debug Test", "<h1>SMTP test</h1><p>Nếu bạn thấy email này, SMTP đang hoạt động.</p>");
-            return Ok(new
-            {
-                emailSent = ok,
-                lastError = _email.LastError,
-                config = new
-                {
-                    from = _config["Email:From"],
-                    fromName = _config["Email:FromName"],
-                    smtpHost = _config["Email:SmtpHost"],
-                    smtpPort = _config["Email:SmtpPort"],
-                    passwordLen = _config["Email:Password"]?.Length ?? 0
-                }
-            });
-        }
-        public record DebugEmailDto(string To);
-
         [HttpPost("resend-verify")]
         [Authorize]
         public async Task<IActionResult> ResendVerify()
