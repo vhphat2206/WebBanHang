@@ -8,6 +8,9 @@ using backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load appsettings.Local.json nếu tồn tại (cho local dev, gitignored)
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {

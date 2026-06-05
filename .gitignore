@@ -10,6 +10,10 @@
 # User-uploaded files (not source)
 backend/wwwroot/uploads/
 
+# Secrets - never commit
+backend/appsettings.Development.json
+backend/appsettings.Local.json
+
 # IDE / Editor
 .vs/
 .vscode/
