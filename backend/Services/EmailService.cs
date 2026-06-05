@@ -19,31 +19,36 @@ namespace backend.Services
             !string.IsNullOrEmpty(_config["Email:From"]) &&
             !string.IsNullOrEmpty(_config["Email:Password"]);
 
+        public string? LastError { get; private set; }
+
         public async Task<bool> SendAsync(string to, string subject, string htmlBody)
         {
-            if (!IsConfigured)
+            LastError = null;
+            var from = _config["Email:From"];
+            var password = _config["Email:Password"];
+
+            if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(password))
             {
-                _logger.LogWarning("Email not configured — skipping send to {To}", to);
+                LastError = $"Not configured: From={(string.IsNullOrEmpty(from) ? "EMPTY" : "OK")}, Password={(string.IsNullOrEmpty(password) ? "EMPTY" : "OK")}";
+                _logger.LogWarning(LastError);
                 return false;
             }
 
             try
             {
-                var fromAddress = _config["Email:From"]!;
                 var fromName = _config["Email:FromName"] ?? "ADLV Store";
-                var password = _config["Email:Password"]!;
                 var host = _config["Email:SmtpHost"] ?? "smtp.gmail.com";
                 var port = int.Parse(_config["Email:SmtpPort"] ?? "587");
 
                 var msg = new MimeMessage();
-                msg.From.Add(new MailboxAddress(fromName, fromAddress));
+                msg.From.Add(new MailboxAddress(fromName, from));
                 msg.To.Add(MailboxAddress.Parse(to));
                 msg.Subject = subject;
                 msg.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
 
                 using var client = new SmtpClient();
                 await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
-                await client.AuthenticateAsync(fromAddress, password.Replace(" ", ""));
+                await client.AuthenticateAsync(from, password.Replace(" ", ""));
                 await client.SendAsync(msg);
                 await client.DisconnectAsync(true);
 
@@ -52,6 +57,7 @@ namespace backend.Services
             }
             catch (Exception ex)
             {
+                LastError = $"{ex.GetType().Name}: {ex.Message}";
                 _logger.LogError(ex, "Failed to send email to {To}", to);
                 return false;
             }
