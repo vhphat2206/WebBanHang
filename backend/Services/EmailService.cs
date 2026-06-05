@@ -35,10 +35,10 @@ namespace backend.Services
 
             try
             {
-                var fromName = _config["Email:FromName"] ?? "ADLV Store";
+                var fromName = string.IsNullOrWhiteSpace(_config["Email:FromName"]) ? "ADLV Store" : _config["Email:FromName"];
                 // Resend free tier: dùng onboarding@resend.dev (không cần verify domain)
                 // Production verify domain xong dùng email custom (vd noreply@adlv-store.com)
-                var fromAddress = _config["Email:From"] ?? "onboarding@resend.dev";
+                var fromAddress = string.IsNullOrWhiteSpace(_config["Email:From"]) ? "onboarding@resend.dev" : _config["Email:From"];
 
                 var payload = new
                 {
