@@ -18,11 +18,22 @@ namespace backend.Controllers
                    ?? "0");
         private readonly ApplicationDbContext _context;
         private readonly JwtService _jwt;
+        private readonly EmailService _email;
+        private readonly IConfiguration _config;
 
-        public AuthController(ApplicationDbContext context, JwtService jwt)
+        public AuthController(ApplicationDbContext context, JwtService jwt, EmailService email, IConfiguration config)
         {
             _context = context;
             _jwt = jwt;
+            _email = email;
+            _config = config;
+        }
+
+        private string GetBaseUrl()
+        {
+            var publicUrl = _config["App:PublicUrl"];
+            if (!string.IsNullOrEmpty(publicUrl)) return publicUrl.TrimEnd('/');
+            return $"{Request.Scheme}://{Request.Host}";
         }
 
         public record LoginDto(string Username, string Password, bool RememberMe = false);
@@ -83,14 +94,28 @@ namespace backend.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            // Gửi email xác thực nếu có config SMTP, nếu không thì trả link trong response (demo)
+            var verifyLink = $"{GetBaseUrl()}/verify-email.html?token={verifyToken}";
+            var emailSent = false;
+            if (!string.IsNullOrEmpty(user.Email))
+            {
+                emailSent = await _email.SendAsync(
+                    user.Email,
+                    "Xác thực tài khoản ADLV Store",
+                    EmailService.BuildVerifyEmailHtml(user.FullName, verifyLink));
+            }
+
             var token = _jwt.GenerateToken(user);
             return Ok(new
             {
                 token,
                 user = new { user.Id, user.Username, user.FullName, user.Email, user.Role, user.EmailVerified },
-                verifyToken,
-                verifyUrl = $"/verify-email.html?token={verifyToken}",
-                message = "Đăng ký thành công. Vui lòng xác thực email."
+                verifyToken = emailSent ? null : verifyToken,
+                verifyUrl = emailSent ? null : $"/verify-email.html?token={verifyToken}",
+                emailSent,
+                message = emailSent
+                    ? $"Đăng ký thành công. Link xác thực đã gửi tới {user.Email}."
+                    : "Đăng ký thành công. Vui lòng xác thực email (demo: dùng link bên dưới)."
             });
         }
 
@@ -112,11 +137,20 @@ namespace backend.Controllers
             user.ResetTokenExpiry = DateTime.UtcNow.AddHours(1);
             await _context.SaveChangesAsync();
 
+            var resetLink = $"{GetBaseUrl()}/reset-password.html?token={user.ResetToken}";
+            var emailSent = await _email.SendAsync(
+                user.Email,
+                "Đặt lại mật khẩu — ADLV Store",
+                EmailService.BuildResetPasswordHtml(user.FullName, resetLink));
+
             return Ok(new
             {
-                message = $"Link đặt lại mật khẩu đã được tạo cho {user.Username}. Có hiệu lực 1 giờ.",
-                resetToken = user.ResetToken,
-                resetUrl = $"/reset-password.html?token={user.ResetToken}"
+                message = emailSent
+                    ? $"Link đặt lại mật khẩu đã được gửi tới {user.Email}. Kiểm tra hộp thư của bạn (kể cả Spam)."
+                    : $"Link đặt lại mật khẩu đã được tạo cho {user.Username}. Có hiệu lực 1 giờ.",
+                resetToken = emailSent ? null : user.ResetToken,
+                resetUrl = emailSent ? null : $"/reset-password.html?token={user.ResetToken}",
+                emailSent
             });
         }
 
@@ -163,11 +197,21 @@ namespace backend.Controllers
 
             user.EmailVerifyToken = Guid.NewGuid().ToString("N");
             await _context.SaveChangesAsync();
+
+            var verifyLink = $"{GetBaseUrl()}/verify-email.html?token={user.EmailVerifyToken}";
+            var emailSent = await _email.SendAsync(
+                user.Email,
+                "Xác thực tài khoản ADLV Store",
+                EmailService.BuildVerifyEmailHtml(user.FullName, verifyLink));
+
             return Ok(new
             {
-                message = "Đã tạo lại link xác thực.",
-                verifyToken = user.EmailVerifyToken,
-                verifyUrl = $"/verify-email.html?token={user.EmailVerifyToken}"
+                message = emailSent
+                    ? $"Link xác thực đã gửi tới {user.Email}. Kiểm tra hộp thư."
+                    : "Đã tạo lại link xác thực.",
+                verifyToken = emailSent ? null : user.EmailVerifyToken,
+                verifyUrl = emailSent ? null : $"/verify-email.html?token={user.EmailVerifyToken}",
+                emailSent
             });
         }
 
