@@ -475,18 +475,18 @@
 
         document.querySelectorAll('input[type="password"]:not([data-pwt])').forEach(input => {
             input.setAttribute('data-pwt', '1');
-            const parent = input.parentElement;
-            if (!parent) return;
-            // Đảm bảo parent positioned để absolute button neo được
-            const curPos = window.getComputedStyle(parent).position;
-            if (curPos === 'static') parent.style.position = 'relative';
+            // Wrap input + button trong 1 div relative (chỉ chứa input) → button luôn neo đúng input
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position:relative;display:block;';
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
             input.style.paddingRight = '40px';
 
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.innerHTML = EYE_OFF;
             btn.setAttribute('aria-label', 'Hiện/ẩn mật khẩu');
-            btn.style.cssText = 'position:absolute;right:12px;background:transparent;border:none;color:#6b7280;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px;z-index:2;';
+            btn.style.cssText = 'position:absolute;right:12px;top:50%;transform:translateY(-50%);background:transparent;border:none;color:#6b7280;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px;z-index:2;';
             btn.onmouseover = () => btn.style.color = '#111';
             btn.onmouseout = () => btn.style.color = '#6b7280';
             btn.onclick = (e) => {
@@ -496,14 +496,7 @@
                 input.type = showing ? 'password' : 'text';
                 btn.innerHTML = showing ? EYE_OFF : EYE_ON;
             };
-            parent.appendChild(btn);
-
-            // Sau khi DOM ổn định, align button vertically với input
-            requestAnimationFrame(() => {
-                const inputRect = input.getBoundingClientRect();
-                const parentRect = parent.getBoundingClientRect();
-                btn.style.top = (inputRect.top - parentRect.top + inputRect.height / 2 - 12) + 'px';
-            });
+            wrapper.appendChild(btn);
         });
     }
     // Re-attach mỗi 500ms vì modal mở/đóng động (đỡ phụ thuộc MutationObserver)
