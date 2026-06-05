@@ -1,6 +1,6 @@
-using MailKit.Net.Smtp;
-using MailKit.Security;
-using MimeKit;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 namespace backend.Services
 {
@@ -8,28 +8,27 @@ namespace backend.Services
     {
         private readonly IConfiguration _config;
         private readonly ILogger<EmailService> _logger;
+        private readonly HttpClient _http;
 
-        public EmailService(IConfiguration config, ILogger<EmailService> logger)
+        public EmailService(IConfiguration config, ILogger<EmailService> logger, IHttpClientFactory httpFactory)
         {
             _config = config;
             _logger = logger;
+            _http = httpFactory.CreateClient();
         }
 
-        public bool IsConfigured =>
-            !string.IsNullOrEmpty(_config["Email:From"]) &&
-            !string.IsNullOrEmpty(_config["Email:Password"]);
+        public bool IsConfigured => !string.IsNullOrEmpty(_config["Email:ResendApiKey"]);
 
         public string? LastError { get; private set; }
 
         public async Task<bool> SendAsync(string to, string subject, string htmlBody)
         {
             LastError = null;
-            var from = _config["Email:From"];
-            var password = _config["Email:Password"];
+            var apiKey = _config["Email:ResendApiKey"];
 
-            if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(password))
+            if (string.IsNullOrEmpty(apiKey))
             {
-                LastError = $"Not configured: From={(string.IsNullOrEmpty(from) ? "EMPTY" : "OK")}, Password={(string.IsNullOrEmpty(password) ? "EMPTY" : "OK")}";
+                LastError = "Email:ResendApiKey is empty";
                 _logger.LogWarning(LastError);
                 return false;
             }
@@ -37,22 +36,33 @@ namespace backend.Services
             try
             {
                 var fromName = _config["Email:FromName"] ?? "ADLV Store";
-                var host = _config["Email:SmtpHost"] ?? "smtp.gmail.com";
-                var port = int.Parse(_config["Email:SmtpPort"] ?? "587");
+                // Resend free tier: dùng onboarding@resend.dev (không cần verify domain)
+                // Production verify domain xong dùng email custom (vd noreply@adlv-store.com)
+                var fromAddress = _config["Email:From"] ?? "onboarding@resend.dev";
 
-                var msg = new MimeMessage();
-                msg.From.Add(new MailboxAddress(fromName, from));
-                msg.To.Add(MailboxAddress.Parse(to));
-                msg.Subject = subject;
-                msg.Body = new BodyBuilder { HtmlBody = htmlBody }.ToMessageBody();
+                var payload = new
+                {
+                    from = $"{fromName} <{fromAddress}>",
+                    to = new[] { to },
+                    subject,
+                    html = htmlBody
+                };
 
-                using var client = new SmtpClient();
-                await client.ConnectAsync(host, port, SecureSocketOptions.StartTls);
-                await client.AuthenticateAsync(from, password.Replace(" ", ""));
-                await client.SendAsync(msg);
-                await client.DisconnectAsync(true);
+                using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.resend.com/emails");
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+                req.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
-                _logger.LogInformation("Email sent to {To}: {Subject}", to, subject);
+                var resp = await _http.SendAsync(req);
+                var body = await resp.Content.ReadAsStringAsync();
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    LastError = $"Resend API {(int)resp.StatusCode}: {body}";
+                    _logger.LogError("Resend API failed: {Body}", body);
+                    return false;
+                }
+
+                _logger.LogInformation("Email sent to {To} via Resend: {Subject}", to, subject);
                 return true;
             }
             catch (Exception ex)
