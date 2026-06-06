@@ -17,8 +17,28 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite("Data Source=fashionshop.db"));
+// DB: ưu tiên Postgres (Neon) nếu có connection string, fallback SQLite cho dev/local
+var dbConnStr = builder.Configuration["Database:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(dbConnStr))
+{
+    // Hỗ trợ cả URL format (postgresql://user:pass@host/db?sslmode=require) lẫn key=value
+    string npgsqlConnStr = dbConnStr;
+    if (dbConnStr.StartsWith("postgres://") || dbConnStr.StartsWith("postgresql://"))
+    {
+        var uri = new Uri(dbConnStr);
+        var userInfo = uri.UserInfo.Split(':');
+        npgsqlConnStr = $"Host={uri.Host};Port={(uri.Port > 0 ? uri.Port : 5432)};" +
+                        $"Database={uri.AbsolutePath.TrimStart('/')};" +
+                        $"Username={userInfo[0]};Password={Uri.UnescapeDataString(userInfo[1])};" +
+                        $"SSL Mode=Require;Trust Server Certificate=true";
+    }
+    builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(npgsqlConnStr));
+}
+else
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite("Data Source=fashionshop.db"));
+}
 
 builder.Services.AddSingleton<JwtService>();
 builder.Services.AddHttpClient();
@@ -65,22 +85,26 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.EnsureCreated();
 
-    // ALTER TABLE để thêm columns mới cho DB đã exist (không mất data)
-    var conn = db.Database.GetDbConnection();
-    await conn.OpenAsync();
-    foreach (var sql in new[]
+    // ALTER TABLE chỉ áp dụng cho SQLite (legacy DB). Postgres EnsureCreated đã tạo
+    // đủ cột từ model (IsLocked, EmailVerified, ResetToken...) nên skip.
+    if (db.Database.IsSqlite())
     {
-        "ALTER TABLE Users ADD COLUMN IsLocked INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE Users ADD COLUMN EmailVerified INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE Users ADD COLUMN ResetToken TEXT NULL",
-        "ALTER TABLE Users ADD COLUMN ResetTokenExpiry TEXT NULL",
-        "ALTER TABLE Users ADD COLUMN EmailVerifyToken TEXT NULL"
-    })
-    {
-        try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
-        catch { /* column đã tồn tại — bỏ qua */ }
+        var conn = db.Database.GetDbConnection();
+        await conn.OpenAsync();
+        foreach (var sql in new[]
+        {
+            "ALTER TABLE Users ADD COLUMN IsLocked INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE Users ADD COLUMN EmailVerified INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE Users ADD COLUMN ResetToken TEXT NULL",
+            "ALTER TABLE Users ADD COLUMN ResetTokenExpiry TEXT NULL",
+            "ALTER TABLE Users ADD COLUMN EmailVerifyToken TEXT NULL"
+        })
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
+            catch { /* column đã tồn tại — bỏ qua */ }
+        }
+        await conn.CloseAsync();
     }
-    await conn.CloseAsync();
 
     await SeedData.InitializeAsync(db);
 }
