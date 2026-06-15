@@ -124,10 +124,54 @@ namespace backend.Controllers
             return Ok(await result.ToListAsync());
         }
 
+        private static readonly string[] AllowedImageExt = { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        private static bool IsValidImageUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return true; // Ảnh là optional
+            // Phải bắt đầu bằng http(s) hoặc / hoặc assets (relative path)
+            var lower = url.ToLower();
+            if (!(lower.StartsWith("http://") || lower.StartsWith("https://") || lower.StartsWith("/") || lower.StartsWith("assets/")))
+                return false;
+            // Phải kết thúc bằng extension ảnh — tách bỏ query string
+            var clean = lower.Split('?')[0];
+            return AllowedImageExt.Any(ext => clean.EndsWith(ext));
+        }
+
+        private async Task<string?> ValidateProductAsync(Product p)
+        {
+            if (string.IsNullOrWhiteSpace(p.Name))
+                return "Tên sản phẩm không được rỗng";
+            if (p.Price <= 0)
+                return "Giá phải lớn hơn 0";
+            if (p.SalePrice.HasValue && p.SalePrice.Value <= 0)
+                return "Giá khuyến mãi phải lớn hơn 0";
+            if (p.SalePrice.HasValue && p.SalePrice.Value >= p.Price)
+                return "Giá khuyến mãi phải nhỏ hơn giá gốc";
+            if (p.Stock < 0)
+                return "Số lượng tồn kho không được âm";
+            var categoryExists = await _context.Categories.AnyAsync(c => c.Id == p.CategoryId);
+            if (!categoryExists)
+                return $"Danh mục #{p.CategoryId} không tồn tại";
+            if (!IsValidImageUrl(p.ImageUrl))
+                return "URL ảnh chính không hợp lệ (chỉ chấp nhận .jpg/.jpeg/.png/.webp/.gif)";
+            if (!string.IsNullOrWhiteSpace(p.ImageUrls))
+            {
+                foreach (var u in p.ImageUrls.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (!IsValidImageUrl(u.Trim()))
+                        return $"URL ảnh phụ không hợp lệ: {u.Trim()}";
+                }
+            }
+            return null;
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] Product product)
         {
+            var error = await ValidateProductAsync(product);
+            if (error != null) return BadRequest(new { message = error });
+
             product.ImageUrl = UpscaleAdlvUrl(product.ImageUrl);
             product.ImageUrls = UpscaleAdlvUrls(product.ImageUrls);
             product.CreatedAt = DateTime.UtcNow;
@@ -145,6 +189,9 @@ namespace backend.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] Product input)
         {
+            var error = await ValidateProductAsync(input);
+            if (error != null) return BadRequest(new { message = error });
+
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound();
 
