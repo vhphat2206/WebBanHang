@@ -76,7 +76,41 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "ADLV Store API",
+        Version = "v1",
+        Description = "RESTful API cho ADLV Store — 60+ endpoints (Auth, Products, Categories, Cart, Orders, Payments, Users, Upload, Notifications).\n\n**Tài khoản test:**\n- Admin: `admin` / `admin123`\n- Customer: `elonmusk` / `musk2026`",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact { Name = "ADLV Store", Email = "vhphat2206@gmail.com" }
+    });
+
+    // Bearer auth UI để Authorize nhanh
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Paste JWT token (lấy từ POST /api/auth/login). Format: chỉ dán token, KHÔNG cần thêm 'Bearer'."
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -154,11 +188,14 @@ var webRoot = app.Environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDi
 var uploadsPath = Path.Combine(webRoot, "uploads");
 Directory.CreateDirectory(uploadsPath);
 
-if (app.Environment.IsDevelopment())
+// Swagger UI luôn bật cho cả production để demo cho thầy
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "ADLV Store API v1");
+    c.RoutePrefix = "swagger"; // → /swagger
+    c.DocumentTitle = "ADLV Store API Docs";
+});
 
 app.UseCors("AllowFrontend");
 app.UseStaticFiles();
