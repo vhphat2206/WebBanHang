@@ -78,6 +78,9 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    // Tránh collision khi nhiều DTO trùng tên ở các controller khác nhau
+    c.CustomSchemaIds(t => t.FullName?.Replace("+", ".") ?? t.Name);
+
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "ADLV Store API",
