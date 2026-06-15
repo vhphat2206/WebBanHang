@@ -219,6 +219,9 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "ADLV Store API v1");
     c.RoutePrefix = "swagger"; // → /swagger
     c.DocumentTitle = "ADLV Store API Docs";
+    // Sort tag theo tên alphabet → "1. Tài khoản" → "9. Thông báo" đúng thứ tự
+    c.ConfigObject.AdditionalItems["tagsSorter"] = "alpha";
+    c.ConfigObject.AdditionalItems["operationsSorter"] = "alpha";
 });
 
 app.UseCors("AllowFrontend");
