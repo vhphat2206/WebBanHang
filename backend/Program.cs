@@ -85,27 +85,60 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.EnsureCreated();
 
-    // ALTER TABLE chỉ áp dụng cho SQLite (legacy DB). Postgres EnsureCreated đã tạo
-    // đủ cột từ model (IsLocked, EmailVerified, ResetToken...) nên skip.
+    var conn = db.Database.GetDbConnection();
+    await conn.OpenAsync();
+
     if (db.Database.IsSqlite())
     {
-        var conn = db.Database.GetDbConnection();
-        await conn.OpenAsync();
         foreach (var sql in new[]
         {
             "ALTER TABLE Users ADD COLUMN IsLocked INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE Users ADD COLUMN EmailVerified INTEGER NOT NULL DEFAULT 0",
             "ALTER TABLE Users ADD COLUMN ResetToken TEXT NULL",
             "ALTER TABLE Users ADD COLUMN ResetTokenExpiry TEXT NULL",
-            "ALTER TABLE Users ADD COLUMN EmailVerifyToken TEXT NULL"
+            "ALTER TABLE Users ADD COLUMN EmailVerifyToken TEXT NULL",
+            "ALTER TABLE Users ADD COLUMN FailedLoginCount INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE Users ADD COLUMN LastFailedLoginAt TEXT NULL"
         })
         {
             try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
-            catch { /* column đã tồn tại — bỏ qua */ }
+            catch { }
         }
-        await conn.CloseAsync();
+    }
+    else
+    {
+        // Postgres — idempotent ADD COLUMN + CREATE TABLE cho bảng/cột mới sau EnsureCreated
+        foreach (var sql in new[]
+        {
+            "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"FailedLoginCount\" INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"LastFailedLoginAt\" TIMESTAMP NULL",
+            @"CREATE TABLE IF NOT EXISTS ""CartItems"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""UserId"" INTEGER NOT NULL REFERENCES ""Users""(""Id"") ON DELETE CASCADE,
+                ""ProductId"" INTEGER NOT NULL REFERENCES ""Products""(""Id"") ON DELETE CASCADE,
+                ""Quantity"" INTEGER NOT NULL DEFAULT 1,
+                ""Size"" VARCHAR(20) NOT NULL DEFAULT '',
+                ""Color"" VARCHAR(30) NOT NULL DEFAULT '',
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
+                ""UpdatedAt"" TIMESTAMP NOT NULL DEFAULT NOW())",
+            @"CREATE TABLE IF NOT EXISTS ""Payments"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""OrderId"" INTEGER NOT NULL REFERENCES ""Orders""(""Id"") ON DELETE CASCADE,
+                ""Method"" VARCHAR(20) NOT NULL DEFAULT 'COD',
+                ""Status"" VARCHAR(20) NOT NULL DEFAULT 'Pending',
+                ""Amount"" DECIMAL(18,2) NOT NULL DEFAULT 0,
+                ""TransactionId"" VARCHAR(100) NULL,
+                ""Note"" VARCHAR(500) NULL,
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
+                ""PaidAt"" TIMESTAMP NULL)"
+        })
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
+            catch { }
+        }
     }
 
+    await conn.CloseAsync();
     await SeedData.InitializeAsync(db);
 }
 

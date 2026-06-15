@@ -49,5 +49,9 @@ namespace backend.Models
 
         [StringLength(100)]
         public string? EmailVerifyToken { get; set; }
+
+        public int FailedLoginCount { get; set; } = 0;
+
+        public DateTime? LastFailedLoginAt { get; set; }
     }
 }

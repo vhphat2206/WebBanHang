@@ -102,6 +102,8 @@ namespace backend.Controllers
             if (user == null) return NotFound();
 
             user.IsLocked = false;
+            user.FailedLoginCount = 0;
+            user.LastFailedLoginAt = null;
             await _context.SaveChangesAsync();
             return Ok(new { message = $"Đã mở khóa tài khoản {user.Username}", user.Id, user.IsLocked });
         }

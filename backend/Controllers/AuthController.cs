@@ -44,19 +44,45 @@ namespace backend.Controllers
         public record ResetPasswordDto(string Token, string NewPassword);
         public record VerifyEmailDto(string Token);
 
+        private const int MaxFailedLogins = 5;
+
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == dto.Username);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-            {
+            if (user == null)
                 return Unauthorized(new { message = "Sai tài khoản hoặc mật khẩu" });
-            }
 
             if (user.IsLocked)
-            {
                 return Unauthorized(new { message = "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên." });
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+            {
+                // Đếm lần login sai, khóa nếu >= MaxFailedLogins (chỉ với Customer)
+                user.FailedLoginCount++;
+                user.LastFailedLoginAt = DateTime.UtcNow;
+                var remaining = MaxFailedLogins - user.FailedLoginCount;
+
+                if (user.FailedLoginCount >= MaxFailedLogins && user.Role != "Admin")
+                {
+                    user.IsLocked = true;
+                    await _context.SaveChangesAsync();
+                    return Unauthorized(new { message = $"Sai mật khẩu {MaxFailedLogins} lần liên tiếp. Tài khoản đã bị khóa." });
+                }
+
+                await _context.SaveChangesAsync();
+                return Unauthorized(new
+                {
+                    message = remaining > 0
+                        ? $"Sai tài khoản hoặc mật khẩu (còn {remaining} lần thử)"
+                        : "Sai tài khoản hoặc mật khẩu"
+                });
             }
+
+            // Login thành công — reset counter
+            user.FailedLoginCount = 0;
+            user.LastFailedLoginAt = null;
+            await _context.SaveChangesAsync();
 
             var token = _jwt.GenerateToken(user, dto.RememberMe);
             return Ok(new

@@ -39,10 +39,53 @@ namespace backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
+        public async Task<IActionResult> GetAll(
+            [FromQuery] bool includeDeleted = false,
+            [FromQuery] int? categoryId = null,
+            [FromQuery] decimal? minPrice = null,
+            [FromQuery] decimal? maxPrice = null,
+            [FromQuery] string? sort = null,
+            [FromQuery] int? page = null,
+            [FromQuery] int? pageSize = null)
         {
             var query = _context.Products.Include(p => p.Category).AsQueryable();
             if (!includeDeleted) query = query.Where(p => !p.IsDeleted);
+
+            // Lọc theo danh mục
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+
+            // Lọc theo khoảng giá (so sánh trên giá hiệu lực = SalePrice ?? Price)
+            if (minPrice.HasValue)
+                query = query.Where(p => (p.SalePrice ?? p.Price) >= minPrice.Value);
+            if (maxPrice.HasValue)
+                query = query.Where(p => (p.SalePrice ?? p.Price) <= maxPrice.Value);
+
+            // Sort theo giá: price_asc / price_desc / newest (mặc định)
+            query = sort?.ToLower() switch
+            {
+                "price_asc" => query.OrderBy(p => p.SalePrice ?? p.Price),
+                "price_desc" => query.OrderByDescending(p => p.SalePrice ?? p.Price),
+                "name_asc" => query.OrderBy(p => p.Name),
+                "name_desc" => query.OrderByDescending(p => p.Name),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+
+            // Pagination — nếu có page+pageSize trả wrapper, không thì list thẳng (backward compat)
+            if (page.HasValue && pageSize.HasValue && pageSize.Value > 0)
+            {
+                var total = await query.CountAsync();
+                var data = await query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToListAsync();
+                return Ok(new
+                {
+                    page = page.Value,
+                    pageSize = pageSize.Value,
+                    total,
+                    totalPages = (int)Math.Ceiling(total / (double)pageSize.Value),
+                    data
+                });
+            }
+
             return Ok(await query.ToListAsync());
         }
 
