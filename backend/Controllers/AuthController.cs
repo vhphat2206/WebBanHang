@@ -43,6 +43,22 @@ namespace backend.Controllers
         public record ForgotPasswordDto(string Email);
         public record ResetPasswordDto(string Token, string NewPassword);
         public record VerifyEmailDto(string Token);
+        public record RefreshTokenDto(string RefreshToken);
+
+        private async Task<string> IssueRefreshTokenAsync(int userId, bool rememberMe)
+        {
+            var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(48))
+                .Replace("/", "_").Replace("+", "-").Replace("=", "");
+            var days = rememberMe ? 90 : 7;
+            _context.RefreshTokens.Add(new Models.RefreshToken
+            {
+                UserId = userId,
+                Token = token,
+                ExpiresAt = DateTime.UtcNow.AddDays(days)
+            });
+            await _context.SaveChangesAsync();
+            return token;
+        }
 
         private const int MaxFailedLogins = 5;
 
@@ -85,12 +101,63 @@ namespace backend.Controllers
             await _context.SaveChangesAsync();
 
             var token = _jwt.GenerateToken(user, dto.RememberMe);
+            var refreshToken = await IssueRefreshTokenAsync(user.Id, dto.RememberMe);
             return Ok(new
             {
                 token,
+                refreshToken,
                 rememberMe = dto.RememberMe,
                 user = new { user.Id, user.Username, user.FullName, user.Email, user.Role, user.EmailVerified, user.AvatarUrl }
             });
+        }
+
+        // POST /api/auth/refresh — Đổi access token mới bằng refresh token
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.RefreshToken))
+                return BadRequest(new { message = "Thiếu refresh token" });
+
+            var stored = await _context.RefreshTokens
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.Token == dto.RefreshToken);
+
+            if (stored == null || !stored.IsActive)
+                return Unauthorized(new { message = "Refresh token không hợp lệ hoặc đã hết hạn" });
+
+            if (stored.User == null || stored.User.IsLocked)
+                return Unauthorized(new { message = "Tài khoản đã bị khóa" });
+
+            // Token rotation: revoke cái cũ, cấp cái mới
+            stored.RevokedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            var rememberMe = (stored.ExpiresAt - stored.CreatedAt).TotalDays > 30;
+            var newAccessToken = _jwt.GenerateToken(stored.User, rememberMe);
+            var newRefreshToken = await IssueRefreshTokenAsync(stored.User.Id, rememberMe);
+
+            return Ok(new
+            {
+                token = newAccessToken,
+                refreshToken = newRefreshToken
+            });
+        }
+
+        // POST /api/auth/logout — Revoke refresh token
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto dto)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.RefreshToken))
+            {
+                var stored = await _context.RefreshTokens
+                    .FirstOrDefaultAsync(r => r.Token == dto.RefreshToken);
+                if (stored != null && stored.RevokedAt == null)
+                {
+                    stored.RevokedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            return Ok(new { message = "Đã đăng xuất" });
         }
 
         [HttpPost("register")]

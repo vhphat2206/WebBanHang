@@ -130,7 +130,15 @@ using (var scope = app.Services.CreateScope())
                 ""TransactionId"" VARCHAR(100) NULL,
                 ""Note"" VARCHAR(500) NULL,
                 ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
-                ""PaidAt"" TIMESTAMP NULL)"
+                ""PaidAt"" TIMESTAMP NULL)",
+            @"CREATE TABLE IF NOT EXISTS ""RefreshTokens"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""UserId"" INTEGER NOT NULL REFERENCES ""Users""(""Id"") ON DELETE CASCADE,
+                ""Token"" VARCHAR(200) NOT NULL,
+                ""ExpiresAt"" TIMESTAMP NOT NULL,
+                ""RevokedAt"" TIMESTAMP NULL,
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW())",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_RefreshTokens_Token"" ON ""RefreshTokens""(""Token"")"
         })
         {
             try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
