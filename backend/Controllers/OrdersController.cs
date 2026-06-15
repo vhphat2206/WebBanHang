@@ -275,6 +275,14 @@ namespace backend.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            // Clear server-side cart sau khi đặt hàng thành công (PDF mục 5)
+            var userCart = await _context.CartItems.Where(c => c.UserId == CurrentUserId).ToListAsync();
+            if (userCart.Any())
+            {
+                _context.CartItems.RemoveRange(userCart);
+                await _context.SaveChangesAsync();
+            }
+
             return Ok(new
             {
                 order.Id,
@@ -284,6 +292,42 @@ namespace backend.Controllers
                 order.CreatedAt,
                 itemCount = order.Items.Count
             });
+        }
+
+        public record FromCartDto(
+            string CustomerName,
+            string Phone,
+            string ShippingAddress,
+            string? Email,
+            string? PaymentMethod,
+            string? VoucherCode,
+            string? Notes,
+            string? GiftBear);
+
+        // POST /api/orders/from-cart — Tạo đơn từ giỏ hàng server-side (PDF mục 5)
+        [HttpPost("from-cart")]
+        public async Task<IActionResult> CreateFromCart([FromBody] FromCartDto info)
+        {
+            var cartItems = await _context.CartItems
+                .Where(c => c.UserId == CurrentUserId)
+                .Select(c => new CartItemDto(c.ProductId, c.Size, c.Color, c.Quantity))
+                .ToListAsync();
+
+            if (!cartItems.Any())
+                return BadRequest(new { message = "Giỏ hàng trống — không thể đặt hàng" });
+
+            var dto = new CreateOrderDto(
+                cartItems,
+                info.CustomerName,
+                info.Phone,
+                info.Email ?? "",
+                info.ShippingAddress,
+                info.PaymentMethod,
+                info.VoucherCode,
+                info.Notes,
+                info.GiftBear);
+
+            return await Create(dto);
         }
 
         [HttpGet("my-vouchers")]
