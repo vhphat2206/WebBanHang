@@ -8,16 +8,41 @@ using backend.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load appsettings.Local.json nếu tồn tại (cho local dev, gitignored)
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite("Data Source=fashionshop.db"));
+// DB: ưu tiên Postgres (Neon) nếu có connection string, fallback SQLite cho dev/local
+var dbConnStr = builder.Configuration["Database:ConnectionString"];
+if (!string.IsNullOrWhiteSpace(dbConnStr))
+{
+    // Hỗ trợ cả URL format (postgresql://user:pass@host/db?sslmode=require) lẫn key=value
+    string npgsqlConnStr = dbConnStr;
+    if (dbConnStr.StartsWith("postgres://") || dbConnStr.StartsWith("postgresql://"))
+    {
+        var uri = new Uri(dbConnStr);
+        var userInfo = uri.UserInfo.Split(':');
+        npgsqlConnStr = $"Host={uri.Host};Port={(uri.Port > 0 ? uri.Port : 5432)};" +
+                        $"Database={uri.AbsolutePath.TrimStart('/')};" +
+                        $"Username={userInfo[0]};Password={Uri.UnescapeDataString(userInfo[1])};" +
+                        $"SSL Mode=Require;Trust Server Certificate=true";
+    }
+    builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(npgsqlConnStr));
+}
+else
+{
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite("Data Source=fashionshop.db"));
+}
 
 builder.Services.AddSingleton<JwtService>();
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<EmailService>();
 
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
@@ -51,7 +76,65 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    // Tránh collision khi nhiều DTO trùng tên ở các controller khác nhau
+    c.CustomSchemaIds(t => t.FullName?.Replace("+", ".") ?? t.Name);
+
+    // Dịch tag controller sang tiếng Việt cho dễ đọc trên Swagger UI
+    c.TagActionsBy(api =>
+    {
+        var name = (api.ActionDescriptor.RouteValues["controller"] ?? "").ToLower();
+        return new[] { name switch
+        {
+            "auth" => "1. Tài khoản",
+            "products" => "2. Sản phẩm",
+            "categories" => "3. Danh mục",
+            "cart" => "4. Giỏ hàng",
+            "orders" => "5. Đặt hàng",
+            "payments" => "6. Thanh toán",
+            "users" => "7. Người dùng (Admin)",
+            "upload" => "8. Tải ảnh (Cloudinary)",
+            "notifications" => "9. Thông báo",
+            _ => name
+        } };
+    });
+    c.DocInclusionPredicate((doc, api) => true);
+    c.OrderActionsBy(api => api.RelativePath);
+
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "ADLV Store API",
+        Version = "v1",
+        Description = "RESTful API cho ADLV Store — 60+ endpoints (Auth, Products, Categories, Cart, Orders, Payments, Users, Upload, Notifications).\n\n**Tài khoản test:**\n- Admin: `admin` / `admin123`\n- Customer: `elonmusk` / `musk2026`",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact { Name = "ADLV Store", Email = "vhphat2206@gmail.com" }
+    });
+
+    // Bearer auth UI để Authorize nhanh
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Paste JWT token (lấy từ POST /api/auth/login). Format: chỉ dán token, KHÔNG cần thêm 'Bearer'."
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -60,23 +143,68 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     db.Database.EnsureCreated();
 
-    // ALTER TABLE để thêm columns mới cho DB đã exist (không mất data)
     var conn = db.Database.GetDbConnection();
     await conn.OpenAsync();
-    foreach (var sql in new[]
-    {
-        "ALTER TABLE Users ADD COLUMN IsLocked INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE Users ADD COLUMN EmailVerified INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE Users ADD COLUMN ResetToken TEXT NULL",
-        "ALTER TABLE Users ADD COLUMN ResetTokenExpiry TEXT NULL",
-        "ALTER TABLE Users ADD COLUMN EmailVerifyToken TEXT NULL"
-    })
-    {
-        try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
-        catch { /* column đã tồn tại — bỏ qua */ }
-    }
-    await conn.CloseAsync();
 
+    if (db.Database.IsSqlite())
+    {
+        foreach (var sql in new[]
+        {
+            "ALTER TABLE Users ADD COLUMN IsLocked INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE Users ADD COLUMN EmailVerified INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE Users ADD COLUMN ResetToken TEXT NULL",
+            "ALTER TABLE Users ADD COLUMN ResetTokenExpiry TEXT NULL",
+            "ALTER TABLE Users ADD COLUMN EmailVerifyToken TEXT NULL",
+            "ALTER TABLE Users ADD COLUMN FailedLoginCount INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE Users ADD COLUMN LastFailedLoginAt TEXT NULL"
+        })
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
+            catch { }
+        }
+    }
+    else
+    {
+        // Postgres — idempotent ADD COLUMN + CREATE TABLE cho bảng/cột mới sau EnsureCreated
+        foreach (var sql in new[]
+        {
+            "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"FailedLoginCount\" INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"LastFailedLoginAt\" TIMESTAMP NULL",
+            @"CREATE TABLE IF NOT EXISTS ""CartItems"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""UserId"" INTEGER NOT NULL REFERENCES ""Users""(""Id"") ON DELETE CASCADE,
+                ""ProductId"" INTEGER NOT NULL REFERENCES ""Products""(""Id"") ON DELETE CASCADE,
+                ""Quantity"" INTEGER NOT NULL DEFAULT 1,
+                ""Size"" VARCHAR(20) NOT NULL DEFAULT '',
+                ""Color"" VARCHAR(30) NOT NULL DEFAULT '',
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
+                ""UpdatedAt"" TIMESTAMP NOT NULL DEFAULT NOW())",
+            @"CREATE TABLE IF NOT EXISTS ""Payments"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""OrderId"" INTEGER NOT NULL REFERENCES ""Orders""(""Id"") ON DELETE CASCADE,
+                ""Method"" VARCHAR(20) NOT NULL DEFAULT 'COD',
+                ""Status"" VARCHAR(20) NOT NULL DEFAULT 'Pending',
+                ""Amount"" DECIMAL(18,2) NOT NULL DEFAULT 0,
+                ""TransactionId"" VARCHAR(100) NULL,
+                ""Note"" VARCHAR(500) NULL,
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW(),
+                ""PaidAt"" TIMESTAMP NULL)",
+            @"CREATE TABLE IF NOT EXISTS ""RefreshTokens"" (
+                ""Id"" SERIAL PRIMARY KEY,
+                ""UserId"" INTEGER NOT NULL REFERENCES ""Users""(""Id"") ON DELETE CASCADE,
+                ""Token"" VARCHAR(200) NOT NULL,
+                ""ExpiresAt"" TIMESTAMP NOT NULL,
+                ""RevokedAt"" TIMESTAMP NULL,
+                ""CreatedAt"" TIMESTAMP NOT NULL DEFAULT NOW())",
+            @"CREATE UNIQUE INDEX IF NOT EXISTS ""IX_RefreshTokens_Token"" ON ""RefreshTokens""(""Token"")"
+        })
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = sql; await cmd.ExecuteNonQueryAsync(); }
+            catch { }
+        }
+    }
+
+    await conn.CloseAsync();
     await SeedData.InitializeAsync(db);
 }
 
@@ -84,11 +212,17 @@ var webRoot = app.Environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDi
 var uploadsPath = Path.Combine(webRoot, "uploads");
 Directory.CreateDirectory(uploadsPath);
 
-if (app.Environment.IsDevelopment())
+// Swagger UI luôn bật cho cả production để demo cho thầy
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "ADLV Store API v1");
+    c.RoutePrefix = "swagger"; // → /swagger
+    c.DocumentTitle = "ADLV Store API Docs";
+    // Sort tag theo tên alphabet → "1. Tài khoản" → "9. Thông báo" đúng thứ tự
+    c.ConfigObject.AdditionalItems["tagsSorter"] = "alpha";
+    c.ConfigObject.AdditionalItems["operationsSorter"] = "alpha";
+});
 
 app.UseCors("AllowFrontend");
 app.UseStaticFiles();

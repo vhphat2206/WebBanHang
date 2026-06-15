@@ -95,7 +95,7 @@
                 <form class="adlv-chat-input" id="adlv-chat-form">
                     <input type="text" id="adlv-chat-input" placeholder="Nhập tin nhắn..." autocomplete="off"/>
                     <button type="submit" aria-label="Gửi">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </button>
                 </form>
             </div>

@@ -1,0 +1,422 @@
+{
+  "info": {
+    "name": "ADLV Store API",
+    "description": "Bộ test full API cho ADLV Store — Web bán hàng .NET 8 + Neon Postgres + Cloudinary + Resend.\n\nBiến cần thiết:\n- baseUrl: https://adlv-shop.onrender.com\n- accessToken: tự fill sau khi login\n- refreshToken: tự fill sau khi login\n\nTài khoản test:\n- admin / admin123\n- elonmusk / musk2026\n- khachhang1 / pass1234\n\nThứ tự chạy gợi ý:\n1. Auth → Login (admin) → token tự lưu\n2. Products / Categories CRUD\n3. Login (customer) → test Cart → from-cart → Payment\n4. Test phân quyền 401/403",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://adlv-shop.onrender.com" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"newuser{{$timestamp}}\",\n  \"password\": \"pass1234\",\n  \"fullName\": \"New User\",\n  \"email\": \"newuser@example.com\"\n}" },
+            "url": "{{baseUrl}}/api/auth/register"
+          }
+        },
+        {
+          "name": "Login (Admin)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "var json = pm.response.json();",
+              "if (json.token) pm.collectionVariables.set('accessToken', json.token);",
+              "if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\",\n  \"rememberMe\": false\n}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Login (Customer)",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "var json = pm.response.json();",
+              "if (json.token) pm.collectionVariables.set('accessToken', json.token);",
+              "if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"elonmusk\",\n  \"password\": \"musk2026\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Login - Sai password (401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"sai\"\n}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "var json = pm.response.json();",
+              "if (json.token) pm.collectionVariables.set('accessToken', json.token);",
+              "if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);"
+            ]}
+          }],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": "{{baseUrl}}/api/auth/refresh"
+          }
+        },
+        {
+          "name": "Get Profile (/me)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Tên mới\",\n  \"email\": \"new@example.com\",\n  \"phone\": \"0901234567\",\n  \"gender\": \"Nam\",\n  \"address\": \"123 Lê Lợi\"\n}" },
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"oldPassword\": \"musk2026\",\n  \"newPassword\": \"newpass1234\"\n}" },
+            "url": "{{baseUrl}}/api/auth/password"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"vhphat2206@gmail.com\"\n}" },
+            "url": "{{baseUrl}}/api/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_FORGOT_RESPONSE\",\n  \"newPassword\": \"newpass1234\"\n}" },
+            "url": "{{baseUrl}}/api/auth/reset-password"
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"PASTE_TOKEN_FROM_REGISTER\"\n}" },
+            "url": "{{baseUrl}}/api/auth/verify-email"
+          }
+        },
+        {
+          "name": "Get Stats",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/auth/stats" }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "url": "{{baseUrl}}/api/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Products",
+      "item": [
+        {
+          "name": "Get All",
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/products" }
+        },
+        {
+          "name": "Get All — Filter & Sort & Pagination",
+          "request": {
+            "auth": { "type": "noauth" }, "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/products?categoryId=1&minPrice=500000&maxPrice=2000000&sort=price_asc&page=1&pageSize=5",
+              "host": ["{{baseUrl}}"], "path": ["api", "products"],
+              "query": [
+                { "key": "categoryId", "value": "1" },
+                { "key": "minPrice", "value": "500000" },
+                { "key": "maxPrice", "value": "2000000" },
+                { "key": "sort", "value": "price_asc" },
+                { "key": "page", "value": "1" },
+                { "key": "pageSize", "value": "5" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get By ID",
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/products/1" }
+        },
+        {
+          "name": "Search by name",
+          "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/products/search?query=fuzzy" }
+        },
+        {
+          "name": "Create (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Áo Test Postman\",\n  \"sku\": \"TEST-001\",\n  \"price\": 500000,\n  \"description\": \"Test SP qua Postman\",\n  \"brand\": \"ADLV\",\n  \"stock\": 10,\n  \"categoryId\": 1,\n  \"imageUrl\": \"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab\"\n}" },
+            "url": "{{baseUrl}}/api/products"
+          }
+        },
+        {
+          "name": "Update (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Áo Đã Update\",\n  \"sku\": \"TEST-001\",\n  \"price\": 600000,\n  \"description\": \"Cập nhật giá\",\n  \"brand\": \"ADLV\",\n  \"stock\": 20,\n  \"categoryId\": 1\n}" },
+            "url": "{{baseUrl}}/api/products/1"
+          }
+        },
+        {
+          "name": "Soft Delete (Admin)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/products/1" }
+        },
+        {
+          "name": "Restore (Admin)",
+          "request": { "method": "PUT", "url": "{{baseUrl}}/api/products/1/restore" }
+        },
+        {
+          "name": "Hard Delete (Admin)",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/products/1?permanent=true" }
+        }
+      ]
+    },
+    {
+      "name": "3. Categories",
+      "item": [
+        { "name": "Get All", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/categories" } },
+        { "name": "Get By ID", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/api/categories/1" } },
+        {
+          "name": "Create (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Phụ Kiện\"\n}" },
+            "url": "{{baseUrl}}/api/categories"
+          }
+        },
+        {
+          "name": "Update (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Tên Mới\"\n}" },
+            "url": "{{baseUrl}}/api/categories/1"
+          }
+        },
+        {
+          "name": "Delete (Admin) — chặn nếu còn SP",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/categories/1" }
+        }
+      ]
+    },
+    {
+      "name": "4. Cart",
+      "item": [
+        { "name": "Get Cart", "request": { "method": "GET", "url": "{{baseUrl}}/api/cart" } },
+        {
+          "name": "Add Item",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"productId\": 1,\n  \"quantity\": 2,\n  \"size\": \"M\",\n  \"color\": \"Đen\"\n}" },
+            "url": "{{baseUrl}}/api/cart/items"
+          }
+        },
+        {
+          "name": "Update Quantity",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"quantity\": 3\n}" },
+            "url": "{{baseUrl}}/api/cart/items/1"
+          }
+        },
+        { "name": "Remove Item", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/cart/items/1" } },
+        { "name": "Clear Cart", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/cart" } },
+        { "name": "Get Total", "request": { "method": "GET", "url": "{{baseUrl}}/api/cart/total" } }
+      ]
+    },
+    {
+      "name": "5. Orders",
+      "item": [
+        {
+          "name": "Create Order (truyền items trong body)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"items\": [\n    { \"productId\": 1, \"size\": \"M\", \"color\": \"Đen\", \"quantity\": 2 }\n  ],\n  \"customerName\": \"Nguyễn Văn A\",\n  \"phone\": \"0901234567\",\n  \"email\": \"a@example.com\",\n  \"shippingAddress\": \"123 Lê Lợi, Q.1, TP.HCM\",\n  \"paymentMethod\": \"COD\"\n}" },
+            "url": "{{baseUrl}}/api/orders"
+          }
+        },
+        {
+          "name": "Create Order from Cart",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"customerName\": \"Elon Musk\",\n  \"phone\": \"0901234567\",\n  \"shippingAddress\": \"1 Rocket Road, Hawthorne CA\",\n  \"paymentMethod\": \"COD\"\n}" },
+            "url": "{{baseUrl}}/api/orders/from-cart"
+          }
+        },
+        { "name": "Get My Orders", "request": { "method": "GET", "url": "{{baseUrl}}/api/orders/my" } },
+        { "name": "Get Order Detail", "request": { "method": "GET", "url": "{{baseUrl}}/api/orders/1" } },
+        { "name": "Get All Orders (Admin)", "request": { "method": "GET", "url": "{{baseUrl}}/api/orders" } },
+        { "name": "Cancel Order", "request": { "method": "PUT", "url": "{{baseUrl}}/api/orders/1/cancel" } },
+        {
+          "name": "Update Status (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Confirmed\"\n}" },
+            "url": "{{baseUrl}}/api/orders/1/status"
+          }
+        },
+        { "name": "Get Vouchers", "request": { "method": "GET", "url": "{{baseUrl}}/api/orders/vouchers" } },
+        { "name": "Get My Vouchers", "request": { "method": "GET", "url": "{{baseUrl}}/api/orders/my-vouchers" } }
+      ]
+    },
+    {
+      "name": "6. Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderId\": 1,\n  \"method\": \"COD\",\n  \"note\": \"Thanh toán khi nhận hàng\"\n}" },
+            "url": "{{baseUrl}}/api/payments"
+          }
+        },
+        { "name": "Get All Payments", "request": { "method": "GET", "url": "{{baseUrl}}/api/payments" } },
+        { "name": "Get Payment Detail", "request": { "method": "GET", "url": "{{baseUrl}}/api/payments/1" } },
+        {
+          "name": "Update Payment Status (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"Paid\",\n  \"transactionId\": \"TXN-12345\"\n}" },
+            "url": "{{baseUrl}}/api/payments/1/status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Users (Admin)",
+      "item": [
+        { "name": "Get All Users", "request": { "method": "GET", "url": "{{baseUrl}}/api/users" } },
+        { "name": "Search Users", "request": { "method": "GET", "url": "{{baseUrl}}/api/users?search=elon" } },
+        { "name": "Get User Detail", "request": { "method": "GET", "url": "{{baseUrl}}/api/users/2" } },
+        { "name": "Lock User", "request": { "method": "PUT", "url": "{{baseUrl}}/api/users/2/lock" } },
+        { "name": "Unlock User", "request": { "method": "PUT", "url": "{{baseUrl}}/api/users/2/unlock" } },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"Admin\"\n}" },
+            "url": "{{baseUrl}}/api/users/3/role"
+          }
+        },
+        { "name": "Delete User", "request": { "method": "DELETE", "url": "{{baseUrl}}/api/users/5" } }
+      ]
+    },
+    {
+      "name": "8. Upload (Cloudinary)",
+      "item": [
+        {
+          "name": "Upload Image",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "/path/to/your/image.jpg" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/upload"
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Notifications",
+      "item": [
+        { "name": "Get My Notifications", "request": { "method": "GET", "url": "{{baseUrl}}/api/notifications/my" } }
+      ]
+    },
+    {
+      "name": "10. Test bảo mật JWT",
+      "item": [
+        {
+          "name": "Không có token → 401",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Token sai → 401",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "INVALID_TOKEN_HERE", "type": "string" }] },
+            "method": "GET",
+            "url": "{{baseUrl}}/api/auth/me"
+          }
+        },
+        {
+          "name": "Customer truy cập admin → 403",
+          "description": "Login bằng elonmusk trước, sau đó gọi endpoint này",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/users"
+          }
+        }
+      ]
+    }
+  ]
+}

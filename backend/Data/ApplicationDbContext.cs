@@ -15,6 +15,9 @@ namespace backend.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<UserVoucher> UserVouchers { get; set; }
+        public DbSet<CartItem> CartItems { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -48,6 +51,37 @@ namespace backend.Data
 
             modelBuilder.Entity<UserVoucher>()
                 .HasIndex(v => v.Code)
+                .IsUnique();
+
+            modelBuilder.Entity<CartItem>()
+                .HasOne(c => c.User)
+                .WithMany()
+                .HasForeignKey(c => c.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CartItem>()
+                .HasOne(c => c.Product)
+                .WithMany()
+                .HasForeignKey(c => c.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(c => new { c.UserId, c.ProductId, c.Size, c.Color });
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.Order)
+                .WithMany()
+                .HasForeignKey(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RefreshToken>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<RefreshToken>()
+                .HasIndex(r => r.Token)
                 .IsUnique();
         }
     }

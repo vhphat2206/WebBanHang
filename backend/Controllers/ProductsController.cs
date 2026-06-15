@@ -39,10 +39,53 @@ namespace backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
+        public async Task<IActionResult> GetAll(
+            [FromQuery] bool includeDeleted = false,
+            [FromQuery] int? categoryId = null,
+            [FromQuery] decimal? minPrice = null,
+            [FromQuery] decimal? maxPrice = null,
+            [FromQuery] string? sort = null,
+            [FromQuery] int? page = null,
+            [FromQuery] int? pageSize = null)
         {
             var query = _context.Products.Include(p => p.Category).AsQueryable();
             if (!includeDeleted) query = query.Where(p => !p.IsDeleted);
+
+            // Lọc theo danh mục
+            if (categoryId.HasValue)
+                query = query.Where(p => p.CategoryId == categoryId.Value);
+
+            // Lọc theo khoảng giá (so sánh trên giá hiệu lực = SalePrice ?? Price)
+            if (minPrice.HasValue)
+                query = query.Where(p => (p.SalePrice ?? p.Price) >= minPrice.Value);
+            if (maxPrice.HasValue)
+                query = query.Where(p => (p.SalePrice ?? p.Price) <= maxPrice.Value);
+
+            // Sort theo giá: price_asc / price_desc / newest (mặc định)
+            query = sort?.ToLower() switch
+            {
+                "price_asc" => query.OrderBy(p => p.SalePrice ?? p.Price),
+                "price_desc" => query.OrderByDescending(p => p.SalePrice ?? p.Price),
+                "name_asc" => query.OrderBy(p => p.Name),
+                "name_desc" => query.OrderByDescending(p => p.Name),
+                _ => query.OrderByDescending(p => p.CreatedAt)
+            };
+
+            // Pagination — nếu có page+pageSize trả wrapper, không thì list thẳng (backward compat)
+            if (page.HasValue && pageSize.HasValue && pageSize.Value > 0)
+            {
+                var total = await query.CountAsync();
+                var data = await query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value).ToListAsync();
+                return Ok(new
+                {
+                    page = page.Value,
+                    pageSize = pageSize.Value,
+                    total,
+                    totalPages = (int)Math.Ceiling(total / (double)pageSize.Value),
+                    data
+                });
+            }
+
             return Ok(await query.ToListAsync());
         }
 
@@ -81,10 +124,54 @@ namespace backend.Controllers
             return Ok(await result.ToListAsync());
         }
 
+        private static readonly string[] AllowedImageExt = { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        private static bool IsValidImageUrl(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return true; // Ảnh là optional
+            // Phải bắt đầu bằng http(s) hoặc / hoặc assets (relative path)
+            var lower = url.ToLower();
+            if (!(lower.StartsWith("http://") || lower.StartsWith("https://") || lower.StartsWith("/") || lower.StartsWith("assets/")))
+                return false;
+            // Phải kết thúc bằng extension ảnh — tách bỏ query string
+            var clean = lower.Split('?')[0];
+            return AllowedImageExt.Any(ext => clean.EndsWith(ext));
+        }
+
+        private async Task<string?> ValidateProductAsync(Product p)
+        {
+            if (string.IsNullOrWhiteSpace(p.Name))
+                return "Tên sản phẩm không được rỗng";
+            if (p.Price <= 0)
+                return "Giá phải lớn hơn 0";
+            if (p.SalePrice.HasValue && p.SalePrice.Value <= 0)
+                return "Giá khuyến mãi phải lớn hơn 0";
+            if (p.SalePrice.HasValue && p.SalePrice.Value >= p.Price)
+                return "Giá khuyến mãi phải nhỏ hơn giá gốc";
+            if (p.Stock < 0)
+                return "Số lượng tồn kho không được âm";
+            var categoryExists = await _context.Categories.AnyAsync(c => c.Id == p.CategoryId);
+            if (!categoryExists)
+                return $"Danh mục #{p.CategoryId} không tồn tại";
+            if (!IsValidImageUrl(p.ImageUrl))
+                return "URL ảnh chính không hợp lệ (chỉ chấp nhận .jpg/.jpeg/.png/.webp/.gif)";
+            if (!string.IsNullOrWhiteSpace(p.ImageUrls))
+            {
+                foreach (var u in p.ImageUrls.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (!IsValidImageUrl(u.Trim()))
+                        return $"URL ảnh phụ không hợp lệ: {u.Trim()}";
+                }
+            }
+            return null;
+        }
+
         [HttpPost]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] Product product)
         {
+            var error = await ValidateProductAsync(product);
+            if (error != null) return BadRequest(new { message = error });
+
             product.ImageUrl = UpscaleAdlvUrl(product.ImageUrl);
             product.ImageUrls = UpscaleAdlvUrls(product.ImageUrls);
             product.CreatedAt = DateTime.UtcNow;
@@ -102,6 +189,9 @@ namespace backend.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] Product input)
         {
+            var error = await ValidateProductAsync(input);
+            if (error != null) return BadRequest(new { message = error });
+
             var product = await _context.Products.FindAsync(id);
             if (product == null) return NotFound();
 

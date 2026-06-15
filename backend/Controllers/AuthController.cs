@@ -18,11 +18,22 @@ namespace backend.Controllers
                    ?? "0");
         private readonly ApplicationDbContext _context;
         private readonly JwtService _jwt;
+        private readonly EmailService _email;
+        private readonly IConfiguration _config;
 
-        public AuthController(ApplicationDbContext context, JwtService jwt)
+        public AuthController(ApplicationDbContext context, JwtService jwt, EmailService email, IConfiguration config)
         {
             _context = context;
             _jwt = jwt;
+            _email = email;
+            _config = config;
+        }
+
+        private string GetBaseUrl()
+        {
+            var publicUrl = _config["App:PublicUrl"];
+            if (!string.IsNullOrEmpty(publicUrl)) return publicUrl.TrimEnd('/');
+            return $"{Request.Scheme}://{Request.Host}";
         }
 
         public record LoginDto(string Username, string Password, bool RememberMe = false);
@@ -32,28 +43,121 @@ namespace backend.Controllers
         public record ForgotPasswordDto(string Email);
         public record ResetPasswordDto(string Token, string NewPassword);
         public record VerifyEmailDto(string Token);
+        public record RefreshTokenDto(string RefreshToken);
+
+        private async Task<string> IssueRefreshTokenAsync(int userId, bool rememberMe)
+        {
+            var token = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(48))
+                .Replace("/", "_").Replace("+", "-").Replace("=", "");
+            var days = rememberMe ? 90 : 7;
+            _context.RefreshTokens.Add(new Models.RefreshToken
+            {
+                UserId = userId,
+                Token = token,
+                ExpiresAt = DateTime.UtcNow.AddDays(days)
+            });
+            await _context.SaveChangesAsync();
+            return token;
+        }
+
+        private const int MaxFailedLogins = 5;
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == dto.Username);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
-            {
+            if (user == null)
                 return Unauthorized(new { message = "Sai tài khoản hoặc mật khẩu" });
-            }
 
             if (user.IsLocked)
-            {
                 return Unauthorized(new { message = "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên." });
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+            {
+                // Đếm lần login sai, khóa nếu >= MaxFailedLogins (chỉ với Customer)
+                user.FailedLoginCount++;
+                user.LastFailedLoginAt = DateTime.UtcNow;
+                var remaining = MaxFailedLogins - user.FailedLoginCount;
+
+                if (user.FailedLoginCount >= MaxFailedLogins && user.Role != "Admin")
+                {
+                    user.IsLocked = true;
+                    await _context.SaveChangesAsync();
+                    return Unauthorized(new { message = $"Sai mật khẩu {MaxFailedLogins} lần liên tiếp. Tài khoản đã bị khóa." });
+                }
+
+                await _context.SaveChangesAsync();
+                return Unauthorized(new
+                {
+                    message = remaining > 0
+                        ? $"Sai tài khoản hoặc mật khẩu (còn {remaining} lần thử)"
+                        : "Sai tài khoản hoặc mật khẩu"
+                });
             }
 
+            // Login thành công — reset counter
+            user.FailedLoginCount = 0;
+            user.LastFailedLoginAt = null;
+            await _context.SaveChangesAsync();
+
             var token = _jwt.GenerateToken(user, dto.RememberMe);
+            var refreshToken = await IssueRefreshTokenAsync(user.Id, dto.RememberMe);
             return Ok(new
             {
                 token,
+                refreshToken,
                 rememberMe = dto.RememberMe,
                 user = new { user.Id, user.Username, user.FullName, user.Email, user.Role, user.EmailVerified, user.AvatarUrl }
             });
+        }
+
+        // POST /api/auth/refresh — Đổi access token mới bằng refresh token
+        [HttpPost("refresh")]
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.RefreshToken))
+                return BadRequest(new { message = "Thiếu refresh token" });
+
+            var stored = await _context.RefreshTokens
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.Token == dto.RefreshToken);
+
+            if (stored == null || !stored.IsActive)
+                return Unauthorized(new { message = "Refresh token không hợp lệ hoặc đã hết hạn" });
+
+            if (stored.User == null || stored.User.IsLocked)
+                return Unauthorized(new { message = "Tài khoản đã bị khóa" });
+
+            // Token rotation: revoke cái cũ, cấp cái mới
+            stored.RevokedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            var rememberMe = (stored.ExpiresAt - stored.CreatedAt).TotalDays > 30;
+            var newAccessToken = _jwt.GenerateToken(stored.User, rememberMe);
+            var newRefreshToken = await IssueRefreshTokenAsync(stored.User.Id, rememberMe);
+
+            return Ok(new
+            {
+                token = newAccessToken,
+                refreshToken = newRefreshToken
+            });
+        }
+
+        // POST /api/auth/logout — Revoke refresh token
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] RefreshTokenDto dto)
+        {
+            if (!string.IsNullOrWhiteSpace(dto.RefreshToken))
+            {
+                var stored = await _context.RefreshTokens
+                    .FirstOrDefaultAsync(r => r.Token == dto.RefreshToken);
+                if (stored != null && stored.RevokedAt == null)
+                {
+                    stored.RevokedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+            }
+            return Ok(new { message = "Đã đăng xuất" });
         }
 
         [HttpPost("register")]
@@ -83,14 +187,28 @@ namespace backend.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
+            // Gửi email xác thực nếu có config SMTP, nếu không thì trả link trong response (demo)
+            var verifyLink = $"{GetBaseUrl()}/verify-email.html?token={verifyToken}";
+            var emailSent = false;
+            if (!string.IsNullOrEmpty(user.Email))
+            {
+                emailSent = await _email.SendAsync(
+                    user.Email,
+                    "Xác thực tài khoản ADLV Store",
+                    EmailService.BuildVerifyEmailHtml(user.FullName, verifyLink));
+            }
+
             var token = _jwt.GenerateToken(user);
             return Ok(new
             {
                 token,
                 user = new { user.Id, user.Username, user.FullName, user.Email, user.Role, user.EmailVerified },
-                verifyToken,
-                verifyUrl = $"/verify-email.html?token={verifyToken}",
-                message = "Đăng ký thành công. Vui lòng xác thực email."
+                verifyToken = emailSent ? null : verifyToken,
+                verifyUrl = emailSent ? null : $"/verify-email.html?token={verifyToken}",
+                emailSent,
+                message = emailSent
+                    ? $"Đăng ký thành công. Link xác thực đã gửi tới {user.Email}."
+                    : "Đăng ký thành công. Vui lòng xác thực email (demo: dùng link bên dưới)."
             });
         }
 
@@ -112,11 +230,20 @@ namespace backend.Controllers
             user.ResetTokenExpiry = DateTime.UtcNow.AddHours(1);
             await _context.SaveChangesAsync();
 
+            var resetLink = $"{GetBaseUrl()}/reset-password.html?token={user.ResetToken}";
+            var emailSent = await _email.SendAsync(
+                user.Email,
+                "Đặt lại mật khẩu — ADLV Store",
+                EmailService.BuildResetPasswordHtml(user.FullName, resetLink));
+
             return Ok(new
             {
-                message = $"Link đặt lại mật khẩu đã được tạo cho {user.Username}. Có hiệu lực 1 giờ.",
-                resetToken = user.ResetToken,
-                resetUrl = $"/reset-password.html?token={user.ResetToken}"
+                message = emailSent
+                    ? $"Link đặt lại mật khẩu đã được gửi tới {user.Email}. Kiểm tra hộp thư của bạn (kể cả Spam)."
+                    : $"Link đặt lại mật khẩu đã được tạo cho {user.Username}. Có hiệu lực 1 giờ.",
+                resetToken = emailSent ? null : user.ResetToken,
+                resetUrl = emailSent ? null : $"/reset-password.html?token={user.ResetToken}",
+                emailSent
             });
         }
 
@@ -163,11 +290,21 @@ namespace backend.Controllers
 
             user.EmailVerifyToken = Guid.NewGuid().ToString("N");
             await _context.SaveChangesAsync();
+
+            var verifyLink = $"{GetBaseUrl()}/verify-email.html?token={user.EmailVerifyToken}";
+            var emailSent = await _email.SendAsync(
+                user.Email,
+                "Xác thực tài khoản ADLV Store",
+                EmailService.BuildVerifyEmailHtml(user.FullName, verifyLink));
+
             return Ok(new
             {
-                message = "Đã tạo lại link xác thực.",
-                verifyToken = user.EmailVerifyToken,
-                verifyUrl = $"/verify-email.html?token={user.EmailVerifyToken}"
+                message = emailSent
+                    ? $"Link xác thực đã gửi tới {user.Email}. Kiểm tra hộp thư."
+                    : "Đã tạo lại link xác thực.",
+                verifyToken = emailSent ? null : user.EmailVerifyToken,
+                verifyUrl = emailSent ? null : $"/verify-email.html?token={user.EmailVerifyToken}",
+                emailSent
             });
         }
 
