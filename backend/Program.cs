@@ -81,6 +81,27 @@ builder.Services.AddSwaggerGen(c =>
     // Tránh collision khi nhiều DTO trùng tên ở các controller khác nhau
     c.CustomSchemaIds(t => t.FullName?.Replace("+", ".") ?? t.Name);
 
+    // Dịch tag controller sang tiếng Việt cho dễ đọc trên Swagger UI
+    c.TagActionsBy(api =>
+    {
+        var name = (api.ActionDescriptor.RouteValues["controller"] ?? "").ToLower();
+        return new[] { name switch
+        {
+            "auth" => "1. Tài khoản",
+            "products" => "2. Sản phẩm",
+            "categories" => "3. Danh mục",
+            "cart" => "4. Giỏ hàng",
+            "orders" => "5. Đặt hàng",
+            "payments" => "6. Thanh toán",
+            "users" => "7. Người dùng (Admin)",
+            "upload" => "8. Tải ảnh (Cloudinary)",
+            "notifications" => "9. Thông báo",
+            _ => name
+        } };
+    });
+    c.DocInclusionPredicate((doc, api) => true);
+    c.OrderActionsBy(api => api.RelativePath);
+
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "ADLV Store API",
